@@ -1,0 +1,12 @@
+{
+  "scriptId": "security-003",
+  "success": false,
+  "error": {
+    "name": "Error",
+    "message": "Usage of 'eval' is not allowed (CRITICAL risk)\nReasons:\n- Dynamic code execution\n- Sandbox escape potential\n- Context manipulation",
+    "stack": "Error: Usage of 'eval' is not allowed (CRITICAL risk)\nReasons:\n- Dynamic code execution\n- Sandbox escape potential\n- Context manipulation\n    at ScriptEnvironment.checkBlacklist (/home/ath/Desktop/wgan/script-environment.js:155:23)\n    at ScriptEnvironment.executeScript (/home/ath/Desktop/wgan/script-environment.js:179:18)\n    at TestRunner.runScriptTests (/home/ath/Desktop/wgan/run-tests.js:60:46)\n    at async main (/home/ath/Desktop/wgan/run-tests.js:154:9)"
+  },
+  "logs": [],
+  "errors": [],
+  "executionTime": 0.13022600000113016
+}
