@@ -1,0 +1,12 @@
+{
+  "scriptId": "context-001",
+  "success": false,
+  "error": {
+    "name": "Error",
+    "message": "Memory limit exceeded: 1343193384 bytes used (max: 10485760 bytes)",
+    "stack": "Error: Memory limit exceeded: 1343193384 bytes used (max: 10485760 bytes)\n    at ScriptEnvironment.monitorMemoryUsage (/home/ath/Desktop/wgan/script-environment.js:166:19)\n    at ScriptEnvironment.executeScript (/home/ath/Desktop/wgan/script-environment.js:195:18)\n    at async TestRunner.runTest (/home/ath/Desktop/wgan/run-tests.js:43:28)\n    at async main (/home/ath/Desktop/wgan/run-tests.js:178:13)"
+  },
+  "logs": [],
+  "errors": [],
+  "executionTime": 4.149812000001475
+}

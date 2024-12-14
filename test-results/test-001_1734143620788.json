@@ -1,0 +1,13 @@
+{
+  "scriptId": "test-001",
+  "success": true,
+  "result": {
+    "sum": 8,
+    "product": 15
+  },
+  "logs": [
+    "Adding numbers..."
+  ],
+  "errors": [],
+  "executionTime": 16
+}

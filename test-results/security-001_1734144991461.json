@@ -1,0 +1,12 @@
+{
+  "scriptId": "security-001",
+  "success": false,
+  "error": {
+    "name": "Error",
+    "message": "Usage of 'process' is not allowed (CRITICAL risk)\nReasons:\n- Access to environment variables and secrets\n- System information exposure\n- Process termination capability\n- Direct stdio access",
+    "stack": "Error: Usage of 'process' is not allowed (CRITICAL risk)\nReasons:\n- Access to environment variables and secrets\n- System information exposure\n- Process termination capability\n- Direct stdio access\n    at ScriptEnvironment.checkBlacklist (/home/ath/Desktop/wgan/script-environment.js:155:23)\n    at ScriptEnvironment.executeScript (/home/ath/Desktop/wgan/script-environment.js:179:18)\n    at TestRunner.runTest (/home/ath/Desktop/wgan/run-tests.js:43:43)\n    at main (/home/ath/Desktop/wgan/run-tests.js:178:26)"
+  },
+  "logs": [],
+  "errors": [],
+  "executionTime": 0.29734299999836367
+}

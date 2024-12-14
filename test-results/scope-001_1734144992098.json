@@ -1,0 +1,12 @@
+{
+  "scriptId": "scope-001",
+  "success": false,
+  "error": {
+    "name": "ReferenceError",
+    "message": "global is not defined",
+    "stack": "evalmachine.<anonymous>:1\nconsole.log(global); console.log(window);\n            ^\n\nReferenceError: global is not defined\n    at evalmachine.<anonymous>:1:13\n    at Script.runInContext (node:vm:149:12)\n    at ScriptEnvironment.executeScript (/home/ath/Desktop/wgan/script-environment.js:189:35)\n    at async TestRunner.runTest (/home/ath/Desktop/wgan/run-tests.js:43:28)\n    at async main (/home/ath/Desktop/wgan/run-tests.js:178:13)"
+  },
+  "logs": [],
+  "errors": [],
+  "executionTime": 7.963604000000487
+}
