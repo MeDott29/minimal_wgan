@@ -1,0 +1,22 @@
+{
+  "id": 1734149488468,
+  "script": "\n            (async () => {\n                ({}).constructor.constructor(\"return process\")()\n            })()\n        ",
+  "complexity": 11.68,
+  "metrics": {
+    "length": 118,
+    "operations": 12,
+    "branches": 0,
+    "functionCalls": 1,
+    "variables": 0,
+    "asyncOperations": 1,
+    "errorHandling": 0
+  },
+  "success": true,
+  "duration": 131,
+  "timestamp": "2024-12-14T04:11:28.599Z"
+}ferenceError: nonExistentVariable is not defined\n    at eval (eval at runTest (/home/ath/Desktop/wgan/simple-solution.js:178:19), <anonymous>:3:17)\n    at eval (eval at runTest (/home/ath/Desktop/wgan/simple-solution.js:178:19), <anonymous>:4:15)\n    at ErrorGenerator.runTest (/home/ath/Desktop/wgan/simple-solution.js:178:19)\n    at /home/ath/Desktop/wgan/simple-solution.js:324:69\n    at Array.map (<anonymous>)\n    at runWorker (/home/ath/Desktop/wgan/simple-solution.js:324:49)\n    at async main (/home/ath/Desktop/wgan/simple-solution.js:357:9)",
+    "type": "ReferenceError"
+  },
+  "duration": 130,
+  "timestamp": "2024-12-14T04:11:28.598Z"
+}

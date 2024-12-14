@@ -1,0 +1,22 @@
+{
+  "id": 1734149488474,
+  "script": "\n            (async () => {\n                undefined.method()\n            })()\n        ",
+  "complexity": 9.379999999999999,
+  "metrics": {
+    "length": 88,
+    "operations": 8,
+    "branches": 0,
+    "functionCalls": 1,
+    "variables": 0,
+    "asyncOperations": 1,
+    "errorHandling": 0
+  },
+  "success": false,
+  "error": {
+    "message": "Cannot read properties of undefined (reading 'method')",
+    "stack": "TypeError: Cannot read properties of undefined (reading 'method')\n    at eval (eval at runTest (/home/ath/Desktop/wgan/simple-solution.js:178:19), <anonymous>:3:27)\n    at eval (eval at runTest (/home/ath/Desktop/wgan/simple-solution.js:178:19), <anonymous>:4:15)\n    at ErrorGenerator.runTest (/home/ath/Desktop/wgan/simple-solution.js:178:19)\n    at /home/ath/Desktop/wgan/simple-solution.js:324:69\n    at Array.map (<anonymous>)\n    at runWorker (/home/ath/Desktop/wgan/simple-solution.js:324:49)\n    at async main (/home/ath/Desktop/wgan/simple-solution.js:357:9)",
+    "type": "TypeError"
+  },
+  "duration": 125,
+  "timestamp": "2024-12-14T04:11:28.599Z"
+}

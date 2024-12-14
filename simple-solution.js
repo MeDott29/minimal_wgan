@@ -4,36 +4,85 @@ const { Worker, isMainThread, parentPort } = require('worker_threads');
 const os = require('os');
 
 class ErrorGenerator {
-    constructor() {
-        this.resultsDir = './error-results';
+    constructor(options = {}) {
+        this.config = {
+            resultsDir: options.resultsDir || './error-results',
+            windowSize: options.windowSize || 1000,
+            maxHistorySize: options.maxHistorySize || 1000,
+            cleanupInterval: options.cleanupInterval || 1000,
+            retentionPeriod: options.retentionPeriod || 60 * 60 * 1000, // 1 hour
+            batchSize: options.batchSize || 10
+        };
+
         this.stats = {
             totalTests: 0,
             successfulTests: 0,
             failedTests: 0,
             totalComplexity: 0,
-            complexityHistory: [],
-            throughputHistory: [],
-            lastUpdateTime: Date.now(),
-            errorsPerSecond: 0,
-            peakErrorRate: 0,
             testStartTime: Date.now(),
             errorRates: [],
-            windowSize: 1000, // 1 second window
             errorTypes: new Map(),
-            successRate: '0.0',
-            avgComplexity: '0.0',
-            runtime: '0.0'
+            peakErrorRate: 0
         };
 
-        // Initialize the TUI frame
+        // Buffer for logging
+        this.logBuffer = [];
+        this.isDisplaying = false;
     }
 
-    async init() {
-        await fs.mkdir(this.resultsDir, { recursive: true });
-        // Clear screen once and hide cursor
-        process.stdout.write('\x1b[2J\x1b[H\x1b[?25l');
-        // Draw initial frame
+    async initialize() {
+        await fs.mkdir(this.config.resultsDir, { recursive: true });
+        console.clear(); // Safer than direct terminal commands
+        this.setupCleanupHandlers();
         await this.updateDisplay();
+    }
+
+    setupCleanupHandlers() {
+        process.on('SIGINT', () => {
+            process.exit(0);
+        });
+
+        process.on('uncaughtException', (error) => {
+            console.error('Uncaught Exception:', error);
+            process.exit(1);
+        });
+    }
+
+    generateErrorScenario() {
+        const scenarios = [
+            // Type errors (safe)
+            'null.toString()',
+            'undefined.method()',
+            '({}).nonexistent.property',
+            
+            // Reference errors (safe)
+            'nonExistentVariable',
+            'undefinedFunction()',
+            
+            // Async errors (safe)
+            'Promise.race([Promise.reject("Test Error")])',
+            
+            // Syntax errors (safe)
+            'eval("{")',
+            'eval("function(){{")',
+            
+            // URI errors (safe)
+            'decodeURIComponent("%")',
+            'encodeURI("\uD800")',
+            
+            // Range errors (safe)
+            'new Array(-1)',
+            "Number.prototype.toString.call(null)"
+        ];
+
+        const selectedOp = scenarios[Math.floor(Math.random() * scenarios.length)];
+        return {
+            script: `
+                (async () => {
+                    ${selectedOp}
+                })()
+            `
+        };
     }
 
     calculateComplexity(script) {
@@ -42,300 +91,188 @@ class ErrorGenerator {
             operations: (script.match(/[\+\-\*\/%\(\)]/g) || []).length,
             branches: (script.match(/if|else|switch|case|while|for|do/g) || []).length,
             functionCalls: (script.match(/\w+\(/g) || []).length,
-            variables: new Set(script.match(/\b(?:let|const|var)\s+(\w+)/g) || []).size,
-            asyncOperations: (script.match(/async|await|Promise|setTimeout/g) || []).length,
-            errorHandling: (script.match(/try|catch|throw|finally/g) || []).length
+            variables: new Set(script.match(/\b(?:let|const|var)\s+(\w+)/g) || []).size
         };
 
         return {
-            score: metrics.length * 0.01 +
-                  metrics.operations * 0.5 +
-                  metrics.branches * 2 +
-                  metrics.functionCalls * 1.5 +
-                  metrics.variables * 1 +
-                  metrics.asyncOperations * 3 +
-                  metrics.errorHandling * 2,
+            score: Object.values(metrics).reduce((sum, value) => sum + value, 0),
             metrics
         };
     }
 
-    generateTestScript() {
-        const operations = [
-            // Memory errors (fast to trigger)
-            'new Array(1e9).fill(0)',
-            'Buffer.allocUnsafe(1e9)',
-            '({}).constructor.constructor("return process")()',
-            
-            // Type errors (very fast)
-            'null.toString()',
-            'undefined.method()',
-            '({}).nonexistent.property',
-            
-            // Reference errors (immediate)
-            'nonExistentVariable',
-            'undefinedFunction()',
-            'this.doesNotExist.atAll()',
-            
-            // Recursive errors (very fast)
-            '(() => { const x = []; x.push(x); JSON.stringify(x) })()',
-            
-            // Memory-intensive operations
-            'new Array(2**32)',
-            'Array(2**31).join("x")',
-            
-            // CPU-intensive errors
-            '(() => { while(true) {} })()',
-            
-            // Async errors that resolve quickly
-            'Promise.race([Promise.reject("Quick Error")])',
-            
-            // Type coercion errors
-            'BigInt(Symbol())',
-            '({}) + ({})',
-            
-            // Prototype chain errors
-            'Object.create(null).toString()',
-            'Object.setPrototypeOf({}, null).toString()',
-            
-            // Syntax errors via eval
-            'eval("{")',
-            'eval("function(){{")',
-            'eval("return}")',
-            
-            // URI errors
-            'decodeURIComponent("%")',
-            'encodeURI("\uD800")',
-            
-            // Range errors
-            'new Array(-1)',
-            'new Array(1e99)',
-            "Number.prototype.toString.call(null)"
-        ];
+    async runTest() {
+        const startTime = Date.now();
+        const { script } = this.generateErrorScenario();
+        const { score: complexity, metrics } = this.calculateComplexity(script);
 
-        const selectedOp = operations[Math.floor(Math.random() * operations.length)];
-        const script = `
-            (async () => {
-                ${selectedOp}
-            })()
-        `;
+        try {
+            await eval(script);
+            return this.processTestResult({ success: true, script, complexity, metrics, startTime });
+        } catch (error) {
+            return this.processTestResult({ success: false, script, complexity, metrics, startTime, error });
+        }
+    }
 
-        const complexity = this.calculateComplexity(script);
-        return { script, complexity: complexity.score, metrics: complexity.metrics };
+    processTestResult({ success, script, complexity, metrics, startTime, error = null }) {
+        const duration = Date.now() - startTime;
+        const testResult = {
+            id: Date.now(),
+            script,
+            complexity,
+            metrics,
+            success,
+            duration,
+            timestamp: new Date().toISOString()
+        };
+
+        if (!error) {
+            testResult.error = {
+                message: error?.message || 'Unknown error',
+                type: error?.constructor?.name || 'Unknown'
+            };
+        }
+
+        this.updateStats(testResult);
+        this.saveResult(testResult);
+        return testResult;
+    }
+
+    updateStats(result) {
+        const stats = this.stats;
+        stats.totalTests++;
+        result.success ? stats.successfulTests++ : stats.failedTests++;
+        
+        stats.totalComplexity += result.complexity;
+
+        if (!result.success) {
+            const errorType = result.error.type;
+            stats.errorTypes.set(errorType, (stats.errorTypes.get(errorType) || 0) + 1);
+            stats.errorRates.push({ timestamp: Date.now() });
+        }
+
+        const currentErrorRate = this.calculateErrorRate();
+        stats.peakErrorRate = Math.max(stats.peakErrorRate, currentErrorRate);
+
+        this.updateDisplay();
     }
 
     calculateErrorRate() {
         const now = Date.now();
-        const window = this.stats.windowSize;
-        
-        // Remove old entries
         this.stats.errorRates = this.stats.errorRates.filter(
-            rate => now - rate.timestamp < window
+            rate => now - rate.timestamp < this.config.windowSize
         );
-        
-        // Calculate current rate
-        const errorsInWindow = this.stats.errorRates.length;
-        const rate = (errorsInWindow / window) * 1000; // errors per second
-        
-        return rate;
+        return (this.stats.errorRates.length / this.config.windowSize) * 1000;
     }
 
-    classifyError(error) {
-        const type = error.constructor.name;
-        const count = (this.stats.errorTypes.get(type) || 0) + 1;
-        this.stats.errorTypes.set(type, count);
-        return type;
-    }
-
-    async runTest() {
-        const { script, complexity, metrics } = this.generateTestScript();
-        const testId = Date.now();
-        const startTime = Date.now();
+    async updateDisplay() {
+        if (this.isDisplaying) return;
+        this.isDisplaying = true;
 
         try {
-            await eval(script);
-            
-            const testResult = {
-                id: testId,
-                script,
-                complexity,
-                metrics,
-                success: true,
-                duration: Date.now() - startTime,
-                timestamp: new Date().toISOString()
-            };
+            const stats = this.stats;
+            const runtime = ((Date.now() - stats.testStartTime) / 1000).toFixed(1);
+            const successRate = ((stats.successfulTests / stats.totalTests) * 100).toFixed(1);
+            const avgComplexity = (stats.totalComplexity / stats.totalTests || 0).toFixed(1);
+            const currentErrorRate = this.calculateErrorRate().toFixed(1);
 
-            await this.updateStats(testResult);
-            await this.saveResult(testResult);
-            return testResult;
+            const errorTypes = Array.from(stats.errorTypes.entries())
+                .map(([type, count]) => `${type}: ${count}`)
+                .join(', ');
 
-        } catch (error) {
-            const testResult = {
-                id: testId,
-                script,
-                complexity,
-                metrics,
-                success: false,
-                error: {
-                    message: error.message,
-                    stack: error.stack,
-                    type: this.classifyError(error)
-                },
-                duration: Date.now() - startTime,
-                timestamp: new Date().toISOString()
-            };
+            const status = `
+Error Generator Status
+---------------------
+Error Rate: ${currentErrorRate} errors/sec
+Peak Rate: ${stats.peakErrorRate.toFixed(1)} errors/sec
+Error Types: ${errorTypes}
 
-            await this.updateStats(testResult);
-            await this.saveResult(testResult);
-            return testResult;
+Total Tests: ${stats.totalTests}
+Failed Tests: ${stats.failedTests}
+Success Rate: ${successRate}%
+
+Complexity: ${avgComplexity}
+Runtime: ${runtime}s
+`;
+            console.clear();
+            console.log(status);
+        } finally {
+            this.isDisplaying = false;
         }
     }
 
-    async updateStats(result) {
-        const now = Date.now();
-        
-        // Update basic stats
-        this.stats.totalTests++;
-        if (result.success) {
-            this.stats.successfulTests++;
-        } else {
-            this.stats.failedTests++;
-            this.stats.errorRates.push({
-                timestamp: now,
-                error: result.error
-            });
-        }
+    async saveResult(result) {
+        const filename = path.join(this.config.resultsDir, `test_${result.id}.json`);
+        await fs.writeFile(filename, JSON.stringify(result, null, 2))
+            .catch(error => console.error('Failed to save result:', error));
 
-        // Update complexity metrics
-        this.stats.totalComplexity += result.complexity;
-        this.stats.complexityHistory.push({
-            timestamp: now,
-            complexity: result.complexity,
-            duration: result.duration,
-            success: result.success
-        });
-
-        // Limit history size to prevent memory bloat
-        if (this.stats.complexityHistory.length > 1000) {
-            this.stats.complexityHistory = this.stats.complexityHistory.slice(-1000);
-        }
-
-        // Calculate current error rate
-        this.stats.errorsPerSecond = this.calculateErrorRate();
-        this.stats.peakErrorRate = Math.max(this.stats.peakErrorRate, this.stats.errorsPerSecond);
-
-        // Update display
-        await this.updateDisplay();
-
-        // Periodic cleanup
-        if (this.stats.totalTests % 1000 === 0) {
-            await this.cleanupOldResults();
+        if (this.stats.totalTests % this.config.cleanupInterval === 0) {
+            this.cleanupOldResults().catch(error => console.error('Cleanup failed:', error));
         }
     }
 
     async cleanupOldResults() {
-        const files = await fs.readdir(this.resultsDir);
-        const oneHourAgo = Date.now() - (60 * 60 * 1000);
-        
-        for (const file of files) {
-            const filePath = path.join(this.resultsDir, file);
-            const stats = await fs.stat(filePath);
-            if (stats.mtimeMs < oneHourAgo) {
-                await fs.unlink(filePath);
-            }
-        }
-    }
-
-    async updateDisplay() {
-        const runtime = ((Date.now() - this.stats.testStartTime) / 1000).toFixed(1);
-        const successRate = ((this.stats.successfulTests / this.stats.totalTests) * 100).toFixed(1);
-        const avgComplexity = (this.stats.totalComplexity / this.stats.totalTests || 0).toFixed(1);
-
-        const errorTypes = Array.from(this.stats.errorTypes.entries())
-            .map(([type, count]) => `║  ${type}: ${count}`.padEnd(50))
-            .join('\n');
-
-        // Move cursor to home position
-        process.stdout.write('\x1b[H');
-
-        // Update frame with current stats
-        const frame = `╔════════════════════════════════════════════════════╗
-║              Error Generator Status                 ║
-╠════════════════════════════════════════════════════╣
-║                                                    ║
-║  Error Rate:     ${String(this.stats.errorsPerSecond.toFixed(1)).padEnd(8)} errors/sec        ║
-║  Peak Rate:      ${String(this.stats.peakErrorRate.toFixed(1)).padEnd(8)} errors/sec        ║
-║                                                    ║
-║  Error Types:                                      ║
-${errorTypes}
-║                                                    ║
-║  Total Tests:    ${String(this.stats.totalTests).padEnd(8)}                    ║
-║  Failed Tests:   ${String(this.stats.failedTests).padEnd(8)}                    ║
-║  Success Rate:   ${successRate.padEnd(8)}%                   ║
-║                                                    ║
-║  Complexity:     ${avgComplexity.padEnd(8)}                    ║
-║  Runtime:        ${runtime.padEnd(8)}s                   ║
-║                                                    ║
-╚════════════════════════════════════════════════════╝`;
-
-        process.stdout.write(frame);
-    }
-
-    async saveResult(result) {
-        const filename = path.join(this.resultsDir, `test_${result.id}.json`);
-        await fs.writeFile(filename, JSON.stringify(result, null, 2));
-    }
-
-    cleanup() {
-        // Show cursor again
-        process.stdout.write('\x1b[?25h');
-    }
-}
-
-async function runWorker() {
-    const generator = new ErrorGenerator();
-    await generator.init();
-
-    while (true) {
         try {
-            await Promise.all(Array(10).fill(0).map(() => generator.runTest()));
+            const files = await fs.readdir(this.config.resultsDir);
+            const cutoffTime = Date.now() - this.config.retentionPeriod;
+            
+            await Promise.all(files.map(async (file) => {
+                const filePath = path.join(this.config.resultsDir, file);
+                const stats = await fs.stat(filePath);
+                if (stats.mtimeMs < cutoffTime) {
+                    await fs.unlink(filePath);
+                }
+            }));
         } catch (error) {
-            console.error('Worker batch error:', error);
+            console.error('Error during cleanup:', error);
         }
     }
 }
 
-async function main() {
-    if (isMainThread) {
-        const generator = new ErrorGenerator();
-        await generator.init();
+class ErrorGeneratorCluster {
+    constructor(options = {}) {
+        this.options = options;
+        this.numWorkers = options.numWorkers || Math.max(1, os.cpus().length - 1);
+    }
 
-        // Handle cleanup on exit
-        process.on('SIGINT', () => {
-            generator.cleanup();
-            process.exit();
-        });
-
-        // Create workers based on CPU cores
-        const numCPUs = os.cpus().length;
-        const workers = new Array(numCPUs).fill(null).map(() => {
-            return new Worker(__filename);
-        });
-
-        workers.forEach(worker => {
-            worker.on('error', console.error);
-            worker.on('exit', code => {
-                if (code !== 0) {
-                    console.error(`Worker stopped with exit code ${code}`);
+    async start() {
+        if (!isMainThread) {
+            const generator = new ErrorGenerator(this.options);
+            await generator.initialize();
+            
+            while (true) {
+                try {
+                    await Promise.all(Array(generator.config.batchSize)
+                        .fill(0)
+                        .map(() => generator.runTest())
+                    );
+                    // Small delay to prevent overwhelming the system
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                } catch (error) {
+                    console.error('Worker batch error:', error);
                 }
+            }
+        } else {
+            console.log(`Starting Error Generator with ${this.numWorkers} workers`);
+            
+            const workers = Array(this.numWorkers)
+                .fill(null)
+                .map(() => new Worker(__filename));
+
+            workers.forEach(worker => {
+                worker.on('error', error => console.error('Worker error:', error));
+                worker.on('exit', code => {
+                    if (code !== 0) {
+                        console.error(`Worker stopped with exit code ${code}`);
+                    }
+                });
             });
-        });
-    } else {
-        await runWorker();
+        }
     }
 }
 
 if (require.main === module) {
-    main().catch(console.error);
+    const cluster = new ErrorGeneratorCluster();
+    cluster.start().catch(console.error);
 }
 
-module.exports = ErrorGenerator;
+module.exports = { ErrorGenerator, ErrorGeneratorCluster };
