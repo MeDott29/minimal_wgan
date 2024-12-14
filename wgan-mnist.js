@@ -236,10 +236,13 @@ class TrainingController {
         
         try {
             // Load MNIST data
-            const data = await tf.data.generator(function* () {
+            const data = await tf.data.generator(async function* () {  // Add async here
                 const mnist = new Image();
                 mnist.src = 'https://storage.googleapis.com/tfjs-tutorials/mnist_images.png';
-                await mnist.decode();
+                await new Promise((resolve, reject) => {
+                    mnist.onload = resolve;
+                    mnist.onerror = reject;
+                });
                 
                 const canvas = document.createElement('canvas');
                 canvas.width = mnist.width;
@@ -254,7 +257,7 @@ class TrainingController {
                     .cast('float32')
                     .div(255);
                     
-                return xs;
+                yield xs;  // Use yield instead of return for generator
             });
 
             this.ui.updateProgress('Processing dataset', 1);
