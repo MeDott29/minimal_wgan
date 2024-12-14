@@ -123,18 +123,168 @@ class DBTester {
             assert(error.message.includes('not found'));
         }
         
-        console.log('Update tests passed! ✅');
-    }
-
-    async testDelete() {
-        console.log('\nTesting Delete...');
+        deleted, true, 'Delete should return true');
         
-        // Create test document
-        const doc = await this.db.create('users', {
-            name: 'Alice Brown',
-            email: 'alice@example.com'
+        // Verify document is gone
+        const notFound = await this.db.read('users', doc.id);
+        assert.equal(notFound, null, 'Document should not exist after deletion');
+        
+        // Test deleting non-existent document
+        const deleteNonExistent = await this.db.delete('users', 'invalid-id');
+        assert.equal(deleteNonExistent, false, 'Deleting non-existent document should return false');
+        
+        console.log('Delete tests passed! ✅');
+    }
+    
+    async testFind() {
+        console.log('\nTesting Find...');
+        
+        // Create test documents
+        await this.db.create('users', {
+            name: 'John Smith',
+            age: 30,
+            active: true
         });
         
-        // Test successful delete
-        const deleted = await this.db.delete('users', doc.id);
-        assert.equal
+        await this.db.create('users', {
+            name: 'Jane Smith',
+            age: 25,
+            active: true
+        });
+        
+        await this.db.create('users', {
+            name: 'Bob Jones',
+            age: 35,
+            active: false
+        });
+        
+        // Test simple query
+        const activeUsers = await this.db.find('users', { active: true });
+        assert.equal(activeUsers.length, 2, 'Should find 2 active users');
+        
+        // Test empty query (all documents)
+        const allUsers = await this.db.find('users', {});
+        assert.equal(allUsers.length, 3, 'Should find all users');
+        
+        // Test no matches
+        const noMatches = await this.db.find('users', { age: 100 });
+        assert.equal(noMatches.length, 0, 'Should find no matches');
+        
+        console.log('Find tests passed! ✅');
+    }
+    
+    async testQueryOperators() {
+        console.log('\nTesting Query Operators...');
+        
+        // Create test documents with various ages
+        const ages = [20, 25, 30, 35, 40];
+        for (const age of ages) {
+            await this.db.create('users', {
+                name: `Test User ${age}`,
+                age: age
+            });
+        }
+        
+        // Test greater than
+        const over30 = await this.db.find('users', { age: { $gt: 30 } });
+        assert.equal(over30.length, 2, 'Should find 2 users over 30');
+        
+        // Test less than or equal
+        const under25 = await this.db.find('users', { age: { $lte: 25 } });
+        assert.equal(under25.length, 2, 'Should find 2 users 25 or under');
+        
+        // Test not equal
+        const not30 = await this.db.find('users', { age: { $ne: 30 } });
+        assert.equal(not30.length, 4, 'Should find 4 users not 30');
+        
+        // Test in array
+        const specific = await this.db.find('users', { age: { $in: [25, 35] } });
+        assert.equal(specific.length, 2, 'Should find 2 users with specific ages');
+        
+        console.log('Query Operators tests passed! ✅');
+    }
+    
+    async testIndexing() {
+        console.log('\nTesting Indexing...');
+        
+        // Create test documents
+        await this.db.create('users', {
+            name: 'Test User 1',
+            email: 'test1@example.com'
+        });
+        
+        await this.db.create('users', {
+            name: 'Test User 2',
+            email: 'test2@example.com'
+        });
+        
+        // Create index on email field
+        await this.db.createIndex('users', 'email');
+        
+        // Test finding by index
+        const user = await this.db.findByIndex('users', 'email', 'test1@example.com');
+        assert.equal(user.length, 1, 'Should find one user by email index');
+        assert.equal(user[0].name, 'Test User 1', 'Should find correct user');
+        
+        // Test non-existent value
+        const notFound = await this.db.findByIndex('users', 'email', 'nonexistent@example.com');
+        assert.equal(notFound.length, 0, 'Should find no users with non-existent email');
+        
+        console.log('Indexing tests passed! ✅');
+    }
+    
+    async testConcurrentAccess() {
+        console.log('\nTesting Concurrent Access...');
+        
+        // Create initial document
+        const doc = await this.db.create('users', {
+            name: 'Concurrent Test',
+            counter: 0
+        });
+        
+        // Run multiple concurrent updates
+        const updates = Array(5).fill().map(async () => {
+            const current = await this.db.read('users', doc.id);
+            const updated = await this.db.update('users', doc.id, {
+                counter: current.counter + 1
+            });
+            return updated;
+        });
+        
+        // Wait for all updates to complete
+        await Promise.all(updates);
+        
+        // Verify final state
+        const final = await this.db.read('users', doc.id);
+        assert.equal(final.counter, 5, 'Counter should be updated correctly');
+        
+        console.log('Concurrent Access tests passed! ✅');
+    }
+    
+    async testBackup() {
+        console.log('\nTesting Backup...');
+        
+        // Create some test data
+        await this.db.create('users', {
+            name: 'Backup Test User',
+            email: 'backup@example.com'
+        });
+        
+        // Create backup
+        const backupPath = path.join(process.cwd(), 'test-backup');
+        const backupDir = await this.db.backup(backupPath);
+        
+        // Verify backup exists
+        const backupExists = await fs.access(backupDir)
+            .then(() => true)
+            .catch(() => false);
+        assert.equal(backupExists, true, 'Backup directory should exist');
+        
+        // Clean up backup
+        await fs.rm(backupPath, { recursive: true, force: true });
+        
+        console.log('Backup tests passed! ✅');
+    }
+}
+
+module.exports = DBTester;
