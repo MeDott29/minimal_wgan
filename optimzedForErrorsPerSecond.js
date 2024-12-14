@@ -1,9 +1,9 @@
 const fs = require('fs').promises;
 const path = require('path');
 
-class SimpleTestRunner {
+class ErrorGenerator {
     constructor() {
-        this.resultsDir = './simple-results';
+        this.resultsDir = './error-results';
         this.stats = {
             totalTests: 0,
             successfulTests: 0,
@@ -13,12 +13,39 @@ class SimpleTestRunner {
             throughputHistory: [],
             lastUpdateTime: Date.now(),
             errorsPerSecond: 0,
-            peakErrorRate: 0
+            peakErrorRate: 0,
+            testStartTime: Date.now()
         };
+
+        // Initialize the TUI frame
+        this.frame = this.createFrame();
+        process.stdout.write(this.frame);
+    }
+
+    createFrame() {
+        return `
+╔════════════════════════════════════════════════════╗
+║              Error Generator Status                 ║
+╠════════════════════════════════════════════════════╣
+║                                                    ║
+║  Error Rate:     0 errors/sec                      ║
+║  Peak Rate:      0 errors/sec                      ║
+║                                                    ║
+║  Total Tests:    0                                 ║
+║  Failed Tests:   0                                 ║
+║  Success Rate:   0%                                ║
+║                                                    ║
+║  Complexity:     0                                 ║
+║  Runtime:        0s                                ║
+║                                                    ║
+╚════════════════════════════════════════════════════╝
+`;
     }
 
     async init() {
         await fs.mkdir(this.resultsDir, { recursive: true });
+        // Clear screen and hide cursor
+        process.stdout.write('\x1b[2J\x1b[0f\x1b[?25l');
     }
 
     calculateComplexity(script) {
@@ -170,20 +197,37 @@ class SimpleTestRunner {
         this.stats.errorsPerSecond = recentErrors;
         this.stats.peakErrorRate = Math.max(this.stats.peakErrorRate, recentErrors);
 
-        // Calculate throughput
-        const throughput = recentTests.length;
-        this.stats.throughputHistory.push({
-            timestamp: now,
-            throughput,
-            avgComplexity: recentTests.reduce((sum, t) => sum + t.complexity, 0) / recentTests.length
-        });
+        // Update display
+        await this.updateDisplay();
+    }
 
-        // Trim history arrays to last minute of data
-        const cutoff = now - 60000;
-        this.stats.complexityHistory = this.stats.complexityHistory.filter(t => t.timestamp > cutoff);
-        this.stats.throughputHistory = this.stats.throughputHistory.filter(t => t.timestamp > cutoff);
-        
-        this.stats.lastUpdateTime = now;
+    async updateDisplay() {
+        const runtime = ((Date.now() - this.stats.testStartTime) / 1000).toFixed(1);
+        const successRate = ((this.stats.successfulTests / this.stats.totalTests) * 100).toFixed(1);
+        const avgComplexity = (this.stats.totalComplexity / this.stats.totalTests || 0).toFixed(1);
+
+        // Move cursor to start of frame
+        process.stdout.write('\x1b[0f');
+
+        // Update frame with current stats
+        const frame = `
+╔════════════════════════════════════════════════════╗
+║              Error Generator Status                 ║
+╠════════════════════════════════════════════════════╣
+║                                                    ║
+║  Error Rate:     ${String(this.stats.errorsPerSecond).padEnd(8)} errors/sec        ║
+║  Peak Rate:      ${String(this.stats.peakErrorRate).padEnd(8)} errors/sec        ║
+║                                                    ║
+║  Total Tests:    ${String(this.stats.totalTests).padEnd(8)}                    ║
+║  Failed Tests:   ${String(this.stats.failedTests).padEnd(8)}                    ║
+║  Success Rate:   ${successRate.padEnd(8)}%                   ║
+║                                                    ║
+║  Complexity:     ${avgComplexity.padEnd(8)}                    ║
+║  Runtime:        ${runtime.padEnd(8)}s                   ║
+║                                                    ║
+╚════════════════════════════════════════════════════╝
+`;
+        process.stdout.write(frame);
     }
 
     async saveResult(result) {
@@ -191,31 +235,27 @@ class SimpleTestRunner {
         await fs.writeFile(filename, JSON.stringify(result, null, 2));
     }
 
-    printStats() {
-        console.clear();
-        console.log('Error Generation Stats:');
-        console.log('=====================');
-        console.log(`Current Error Rate: ${this.stats.errorsPerSecond} errors/sec`);
-        console.log(`Peak Error Rate: ${this.stats.peakErrorRate} errors/sec`);
-        console.log(`Total Tests: ${this.stats.totalTests}`);
-        console.log(`Failed Tests: ${this.stats.failedTests}`);
-        console.log(`Average Complexity: ${(this.stats.totalComplexity / this.stats.totalTests || 0).toFixed(2)}`);
-        console.log(`Runtime: ${((Date.now() - this.stats.lastUpdateTime) / 1000).toFixed(1)}s`);
+    cleanup() {
+        // Show cursor again
+        process.stdout.write('\x1b[?25h');
     }
 }
 
 async function main() {
-    const runner = new SimpleTestRunner();
-    await runner.init();
+    const generator = new ErrorGenerator();
+    await generator.init();
 
-    console.log('Starting error generation test run...\n');
+    // Handle cleanup on exit
+    process.on('SIGINT', () => {
+        generator.cleanup();
+        process.exit();
+    });
 
     // Run continuously to maximize error rate
     while (true) {
         try {
             // Run multiple tests in parallel for higher throughput
-            await Promise.all(Array(50).fill(0).map(() => runner.runTest()));
-            runner.printStats();
+            await Promise.all(Array(50).fill(0).map(() => generator.runTest()));
         } catch (error) {
             console.error('Batch error:', error);
         }
@@ -226,4 +266,4 @@ if (require.main === module) {
     main().catch(console.error);
 }
 
-module.exports = SimpleTestRunner;
+module.exports = ErrorGenerator;
