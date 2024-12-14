@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Digital Grid Art Generator</title>
+    <style>
+        body {
+            background: #0f0f0f;
+            margin: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            max-width: 1200px;
+            padding: 2rem;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+            color: #ffffff;
+            font-weight: 200;
+            letter-spacing: 0.1em;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-bottom: 2rem;
+        }
+
+        button {
+            background: #2a2a2a;
+            border: none;
+            color: #ffffff;
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            background: #3a3a3a;
+            transform: translateY(-2px);
+        }
+
+        .grid-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 2rem;
+        }
+
+        canvas {
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .color-controls {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin: 1rem 0;
+        }
+
+        input[type="color"] {
+            width: 50px;
+            height: 30px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .control-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Digital Grid Art Generator</h1>
+        
+        <div class="controls">
+            <button id="shuffleBtn">Generate New Pattern</button>
+            <button id="downloadBtn">Download Art</button>
+        </div>
+
+        <div class="color-controls">
+            <div class="control-label">
+                <span>Background:</span>
+                <input type="color" id="bgColor" value="#000000">
+            </div>
+            <div class="control-label">
+                <span>Pattern Color:</span>
+                <input type="color" id="digitColor" value="#ffffff">
+            </div>
+        </div>
+
+        <div class="grid-container">
+            <canvas id="gridCanvas"></canvas>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gridCanvas');
+        const ctx = canvas.getContext('2d');
+        const bgColorPicker = document.getElementById('bgColor');
+        const digitColorPicker = document.getElementById('digitColor');
+
+        // Canvas dimensions
+        const GRID_SIZE = 10;
+        const CELL_SIZE = 28;
+        const SPACING = 4;
+        const SCALE = 2;
+
+        // Set canvas size
+        canvas.width = (CELL_SIZE * GRID_SIZE + SPACING * (GRID_SIZE - 1)) * SCALE;
+        canvas.height = canvas.width;
+
+        let currentBgColor = '#000000';
+        let currentDigitColor = '#ffffff';
+
+        // Generate a random digit-like pattern
+        function generateDigitPattern() {
+            const pattern = new Array(CELL_SIZE).fill(0)
+                .map(() => new Array(CELL_SIZE).fill(0));
+            
+            // Generate random shapes
+            const numShapes = 2 + Math.floor(Math.random() * 3);
+            
+            for (let shape = 0; shape < numShapes; shape++) {
+                const centerX = 8 + Math.floor(Math.random() * 12);
+                const centerY = 8 + Math.floor(Math.random() * 12);
+                const radius = 3 + Math.floor(Math.random() * 5);
+                
+                // Draw shape
+                for (let y = 0; y < CELL_SIZE; y++) {
+                    for (let x = 0; x < CELL_SIZE; x++) {
+                        const dx = x - centerX;
+                        const dy = y - centerY;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        
+                        if (distance < radius) {
+                            pattern[y][x] = Math.min(1, pattern[y][x] + 
+                                (1 - distance / radius));
+                        }
+                    }
+                }
+            }
+            
+            // Add some noise
+            for (let y = 0; y < CELL_SIZE; y++) {
+                for (let x = 0; x < CELL_SIZE; x++) {
+                    pattern[y][x] += (Math.random() * 0.2 - 0.1);
+                    pattern[y][x] = Math.max(0, Math.min(1, pattern[y][x]));
+                }
+            }
+            
+            return pattern;
+        }
+
+        function drawGrid() {
+            // Clear canvas with background color
+            ctx.fillStyle = currentBgColor;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Generate and draw patterns
+            for (let row = 0; row < GRID_SIZE; row++) {
+                for (let col = 0; col < GRID_SIZE; col++) {
+                    const pattern = generateDigitPattern();
+                    const x = (col * (CELL_SIZE + SPACING)) * SCALE;
+                    const y = (row * (CELL_SIZE + SPACING)) * SCALE;
+
+                    // Create temporary canvas for the pattern
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = CELL_SIZE;
+                    tempCanvas.height = CELL_SIZE;
+                    const tempCtx = tempCanvas.getContext('2d');
+                    const imageData = tempCtx.createImageData(CELL_SIZE, CELL_SIZE);
+                    
+                    // Convert pattern to image data
+                    const digitColor = hexToRgb(currentDigitColor);
+                    pattern.forEach((row, i) => {
+                        row.forEach((value, j) => {
+                            const idx = (i * CELL_SIZE + j) * 4;
+                            imageData.data[idx] = digitColor.r;     // R
+                            imageData.data[idx + 1] = digitColor.g; // G
+                            imageData.data[idx + 2] = digitColor.b; // B
+                            imageData.data[idx + 3] = value * 255;  // A
+                        });
+                    });
+
+                    tempCtx.putImageData(imageData, 0, 0);
+                    ctx.drawImage(tempCanvas, x, y, CELL_SIZE * SCALE, CELL_SIZE * SCALE);
+                }
+            }
+        }
+
+        function hexToRgb(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : null;
+        }
+
+        // Event Listeners
+        document.getElementById('shuffleBtn').addEventListener('click', drawGrid);
+        
+        document.getElementById('downloadBtn').addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = 'digital-art.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        });
+
+        bgColorPicker.addEventListener('input', (e) => {
+            currentBgColor = e.target.value;
+            drawGrid();
+        });
+
+        digitColorPicker.addEventListener('input', (e) => {
+            currentDigitColor = e.target.value;
+            drawGrid();
+        });
+
+        // Initial draw
+        drawGrid();
+    </script>
+</body>
+</html>

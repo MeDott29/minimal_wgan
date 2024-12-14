@@ -228,19 +228,38 @@ class TrainingController {
         this.ui.updateStatus('Loading MNIST dataset...');
         
         try {
-            const mnist = await tf.data.mnist();
-            const trainData = mnist.trainImages;
-            
-            // Normalize and reshape the images
-            const processedImages = trainData.reshape([60000, 28, 28, 1])
-                .sub(127.5)
-                .div(127.5);
+            // Load MNIST data
+            const data = await tf.data.generator(async function* () {
+                const mnist = new Image();
+                mnist.src = 'https://storage.googleapis.com/tfjs-tutorials/mnist_images.png';
+                await new Promise((resolve, reject) => {
+                    mnist.onload = resolve;
+                    mnist.onerror = reject;
+                });
+                
+                const canvas = document.createElement('canvas');
+                canvas.width = mnist.width;
+                canvas.height = mnist.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(mnist, 0, 0);
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                
+                // Convert to tensor and normalize
+                const xs = tf.browser.fromPixels(imageData, 1)
+                    .reshape([60000, 28, 28, 1])
+                    .cast('float32')
+                    .div(255)
+                    .sub(0.5) // Normalize to [-0.5, 0.5]
+                    .mul(2); // Scale to [-1, 1]
+                    
+                yield xs;  // Use yield instead of return for generator
+            });
 
-            this.ui.updateProgress('Dataset loaded', 1);
-            await tf.nextFrame();
+            this.ui.updateProgress('Processing dataset', 1);
+            await new Promise(resolve => setTimeout(resolve, 500));
             this.ui.elements.progressContainer.style.display = 'none';
             
-            return processedImages;
+            return data;
         } catch (error) {
             this.ui.updateStatus(`Error loading dataset: ${error.message}`);
             throw error;
@@ -279,8 +298,8 @@ class TrainingController {
                     this.ui.updateMetrics(
                         epoch + 1,
                         this.numEpochs,
-                        dLoss.dataSync()[0],
-                        gLoss.dataSync()[0]
+                    dLoss.dataSync()[0], // Corrected: dLoss should be a tensor by now
+                    gLoss.dataSync()[0]  // Corrected: gLoss should be a tensor by now
                     );
 
                     // Generate sample image periodically
@@ -289,8 +308,7 @@ class TrainingController {
                         this.ui.displayImage(generatedImage.reshape([28, 28]));
                         tf.dispose(generatedImage);
                     }
-
-                    tf.dispose([batchImages, dLoss, gLoss]);
+                tf.dispose([batchImages]);
                     await tf.nextFrame();
                 }
             }

@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>WGAN MNIST Generator</title>
+    <title>WGAN MNIST Generator - Resource-Aware</title>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-data"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-vis"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mnist"></script>
     <style>
         body {
@@ -124,12 +123,56 @@
             color: #666;
             margin-top: 4px;
         }
+        .system-info {
+            background: #f0f4ff;
+            padding: 16px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .system-info h3 {
+            margin: 0 0 12px 0;
+            color: #2a2a2a;
+        }
+        .param-slider {
+            margin: 16px 0;
+        }
+        .param-slider label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        .param-slider input {
+            width: 100%;
+        }
+        .param-value {
+            font-size: 14px;
+            color: #666;
+            margin-top: 4px;
+        }
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+            padding: 12px;
+            border-radius: 6px;
+            margin: 12px 0;
+            display: none;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>WGAN MNIST Generator</h1>
+            <h1>WGAN MNIST Generator - Resource-Aware</h1>
+        </div>
+
+        <div class="system-info">
+            <h3>System Capabilities</h3>
+            <button id="checkSystem">Check System Resources</button>
+            <div id="systemDetails"></div>
+        </div>
+
+        <div class="warning" id="resourceWarning">
+            Your system's resources are limited. Training parameters have been adjusted accordingly.
         </div>
 
         <div class="progress-container" id="progressContainer">
@@ -140,6 +183,26 @@
             <div class="progress-status">
                 <span id="progressText">0%</span>
                 <span id="progressPhase">Initializing...</span>
+            </div>
+        </div>
+
+        <div class="training-params">
+            <div class="param-slider">
+                <label for="batchSize">Batch Size</label>
+                <input type="range" id="batchSize" min="1" max="64" value="16">
+                <div class="param-value">Current: <span id="batchSizeValue">16</span></div>
+            </div>
+            
+            <div class="param-slider">
+                <label for="epochs">Number of Epochs</label>
+                <input type="range" id="epochs" min="1" max="50" value="10">
+                <div class="param-value">Current: <span id="epochsValue">10</span></div>
+            </div>
+
+            <div class="param-slider">
+                <label for="latentDim">Latent Dimension</label>
+                <input type="range" id="latentDim" min="32" max="128" value="64">
+                <div class="param-value">Current: <span id="latentDimValue">64</span></div>
             </div>
         </div>
 
@@ -171,9 +234,83 @@
     </div>
 
     <script>
-        // UI Controller
-        class UIController {
+        class SystemCheck {
             constructor() {
+                this.memoryThreshold = 200 * 1024 * 1024; // 200MB
+            }
+
+            async checkGPUCapabilities() {
+                try {
+                    await tf.setBackend('webgl');
+                    const gpuInfo = await tf.env().getFlags();
+                    return {
+                        hasWebGL: true,
+                        maxTextureSize: gpuInfo.WEBGL_MAX_TEXTURE_SIZE || 0,
+                        hasPowerEfficient: 'powerPreference' in WebGLRenderingContext.prototype,
+                        backend: tf.getBackend()
+                    };
+                } catch (e) {
+                    return {
+                        hasWebGL: false,
+                        maxTextureSize: 0,
+                        hasPowerEfficient: false,
+                        backend: 'cpu'
+                    };
+                }
+            }
+
+            async checkMemory() {
+                if ('memory' in performance) {
+                    return {
+                        totalJSHeapSize: performance.memory.totalJSHeapSize,
+                        usedJSHeapSize: performance.memory.usedJSHeapSize,
+                        jsHeapSizeLimit: performance.memory.jsHeapSizeLimit
+                    };
+                }
+                return null;
+            }
+
+            async getOptimalParameters() {
+                const gpuCaps = await this.checkGPUCapabilities();
+                const memory = await this.checkMemory();
+
+                // Base parameters
+                let params = {
+                    batchSize: 16,
+                    epochs: 10,
+                    latentDim: 64
+                };
+
+                // Adjust based on GPU capabilities
+                if (gpuCaps.hasWebGL) {
+                    if (gpuCaps.maxTextureSize > 4096) {
+                        params.batchSize = Math.min(32, params.batchSize);
+                        params.epochs = Math.min(20, params.epochs);
+                    } else {
+                        params.batchSize = Math.min(16, params.batchSize);
+                        params.epochs = Math.min(10, params.epochs);
+                    }
+                } else {
+                    // CPU-only mode
+                    params.batchSize = 8;
+                    params.epochs = 5;
+                    params.latentDim = 32;
+                }
+
+                // Adjust based on available memory
+                if (memory && memory.jsHeapSizeLimit < this.memoryThreshold) {
+                    params.batchSize = Math.min(params.batchSize, 8);
+                    params.epochs = Math.min(params.epochs, 5);
+                    params.latentDim = Math.min(params.latentDim, 32);
+                }
+
+                return params;
+            }
+        }
+
+        // Modified UI Controller
+        class UIController {
+             constructor() {
                 this.elements = {
                     trainButton: document.getElementById('trainButton'),
                     generateButton: document.getElementById('generateButton'),
@@ -234,13 +371,32 @@
                 this.elements.trainButton.textContent = isTraining ? 'Stop Training' : 'Start Training';
                 this.elements.generateButton.disabled = isTraining;
             }
+
+
+            updateSystemInfo(info) {
+                const systemDetails = document.getElementById('systemDetails');
+                systemDetails.innerHTML = `
+                    <p>GPU Support: ${info.hasWebGL ? 'Available (WebGL)' : 'Not Available'}</p>
+                    <p>Recommended Settings:</p>
+                    <ul>
+                        <li>Batch Size: ${info.batchSize}</li>
+                        <li>Epochs: ${info.epochs}</li>
+                        <li>Latent Dimension: ${info.latentDim}</li>
+                    </ul>
+                `;
+            }
+
+            showResourceWarning(show) {
+                const warning = document.getElementById('resourceWarning');
+                warning.style.display = show ? 'block' : 'none';
+            }
         }
 
-        // WGAN Model
+        // Modified WGAN class with dynamic parameters
         class WGAN {
-            constructor() {
-                this.latentDim = 128;
-                this.batchSize = 64;
+             constructor(params = {}) {
+                this.latentDim = params.latentDim || 64;
+                this.batchSize = params.batchSize || 16;
                 this.discriminator = this.buildDiscriminator();
                 this.generator = this.buildGenerator();
                 this.dOptimizer = tf.train.adam(1e-4, 0, 0.9);
@@ -313,7 +469,7 @@
                 return model;
             }
 
-            async trainDiscriminator(realImages) {
+             async trainDiscriminator(realImages) {
                 const batchSize = realImages.shape[0];
 
                 return tf.tidy(() => {
@@ -357,7 +513,7 @@
                 });
             }
 
-            async trainGenerator() {
+             async trainGenerator() {
                 return tf.tidy(() => {
                     const noise = tf.randomNormal([this.batchSize, this.latentDim]);
                     
@@ -372,8 +528,7 @@
                     return value;
                 });
             }
-
-            generateImage() {
+             generateImage() {
                 return tf.tidy(() => {
                     const noise = tf.randomNormal([1, this.latentDim]);
                     return this.generator.predict(noise);
@@ -381,23 +536,42 @@
             }
         }
 
-        // Training Controller
+        // Modified Training Controller
         class TrainingController {
             constructor(wgan, ui) {
                 this.wgan = wgan;
                 this.ui = ui;
                 this.isTraining = false;
-                this.numEpochs = 50;
+                this.numEpochs = 10;
                 this.trainImages = null;
+                this.systemCheck = new SystemCheck();
                 this.setupEventListeners();
             }
 
             setupEventListeners() {
-                this.ui.elements.trainButton.onclick = () => this.toggleTraining();
-                this.ui.elements.generateButton.onclick = () => this.generateImage();
+                 this.ui.elements.trainButton.onclick = () => this.toggleTraining();
+                 this.ui.elements.generateButton.onclick = () => this.generateImage();
+                document.getElementById('checkSystem').onclick = () => this.checkSystemResources();
             }
 
-            async loadMNIST() {
+             async checkSystemResources() {
+                const params = await this.systemCheck.getOptimalParameters();
+                this.ui.updateSystemInfo(params);
+                
+                // Update sliders with recommended values
+                document.getElementById('batchSize').value = params.batchSize;
+                document.getElementById('epochs').value = params.epochs;
+                document.getElementById('latentDim').value = params.latentDim;
+                
+                // Update displayed values
+                document.getElementById('batchSizeValue').textContent = params.batchSize;
+                document.getElementById('epochsValue').textContent = params.epochs;
+                document.getElementById('latentDimValue').textContent = params.latentDim;
+                
+                // Show warning if resources are limited
+                this.ui.showResourceWarning(params.batchSize < 16);
+            }
+              async loadMNIST() {
                 this.ui.updateStatus('Loading MNIST dataset...');
                 
                 try {
@@ -407,7 +581,8 @@
                         const d = new Array(60000).fill(0).map(() => 
                             tf.randomUniform([28, 28, 1], -1, 1)
                         );
-                        return [tf.stack(d)];
+                       const xs = tf.stack(d) 
+                        return [xs];
                     });
                     
                     this.ui.updateStatus('Dataset loaded. Starting training...');
@@ -416,12 +591,13 @@
                     await new Promise(resolve => setTimeout(resolve, 500));
                     this.ui.elements.progressContainer.style.display = 'none';
                     
-                    return xs;
+                    return trainImages; // return the images here, not xs
                 } catch (error) {
                     this.ui.updateStatus(`Error loading dataset: ${error.message}`);
                     throw error;
                 }
             }
+
 
             async train() {
                 try {
@@ -440,7 +616,10 @@
                             const startIdx = batch * this.wgan.batchSize;
                             const batchIndices = indices.slice(startIdx, startIdx + this.wgan.batchSize);
                             
-                            const batchImages = tf.tidy(() => tf.gather(this.trainImages, batchIndices));
+                            const batchImages = tf.tidy(() => {
+                                const indicesTensor = tf.tensor1d(batchIndices, 'int32'); // Convert to tensor here
+                                return tf.gather(this.trainImages, indicesTensor)
+                            });
 
                             // Train discriminator
                             let dLoss = 0;
@@ -462,8 +641,8 @@
                             // Generate sample image periodically
                             if (batch % 10 === 0) {
                                 const generatedImage = this.wgan.generateImage();
-                                this.ui.displayImage(generatedImage.reshape([28, 28]));
-                                tf.dispose(generatedImage);
+                                 this.ui.displayImage(generatedImage.reshape([28, 28]));
+                                 tf.dispose(generatedImage);
                             }
                             
                             tf.dispose([batchImages]);
@@ -496,7 +675,7 @@
 
             async generateImage() {
                 try {
-                    const generatedImage = this.wgan.generateImage();
+                     const generatedImage = this.wgan.generateImage();
                     this.ui.displayImage(generatedImage.reshape([28, 28]));
                     tf.dispose(generatedImage);
                 } catch (error) {
@@ -508,17 +687,34 @@
         // Initialize the application
         document.addEventListener('DOMContentLoaded', async () => {
             try {
+                const systemCheck = new SystemCheck();
+                const params = await systemCheck.getOptimalParameters();
+                
+                const ui = new UIController();
+                const wgan = new WGAN(params);
+                const trainer = new TrainingController(wgan, ui);
+                
+                // Initial system check
+                trainer.checkSystemResources();
+                
+                // Set up parameter change listeners
+                ['batchSize', 'epochs', 'latentDim'].forEach(param => {
+                    const slider = document.getElementById(param);
+                    const valueDisplay = document.getElementById(`${param}Value`);
+                    slider.addEventListener('input', () => {
+                        valueDisplay.textContent = slider.value;
+                        // Update WGAN parameters if needed
+                        if (param in wgan) {
+                            wgan[param] = parseInt(slider.value);
+                        }
+                    });
+                });
+
                 // Configure TensorFlow.js
                 await tf.setBackend('webgl');
                 tf.env().set('WEBGL_DELETE_TEXTURE_THRESHOLD', 0);
-
-                // Create instances
-                const ui = new UIController();
-                const wgan = new WGAN();
-                const trainer = new TrainingController(wgan, ui);
-
                 // Set up error handling
-                window.addEventListener('error', (event) => {
+                 window.addEventListener('error', (event) => {
                     ui.updateStatus(`Error: ${event.message}`);
                 });
 
@@ -536,4 +732,3 @@
     </script>
 </body>
 </html>
-                        
