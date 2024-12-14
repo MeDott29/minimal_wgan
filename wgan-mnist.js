@@ -235,21 +235,33 @@ class TrainingController {
         this.ui.updateStatus('Loading MNIST dataset...');
         
         try {
-            const mnist = await tf.data.mnist({
-                onProgress: (progress) => {
-                    if (progress < 0.5) {
-                        this.ui.updateProgress('Loading training set', progress * 2);
-                    } else {
-                        this.ui.updateProgress('Loading test set', (progress - 0.5) * 2);
-                    }
-                }
+            // Load MNIST data
+            const data = await tf.data.generator(function* () {
+                const mnist = new Image();
+                mnist.src = 'https://storage.googleapis.com/tfjs-tutorials/mnist_images.png';
+                await mnist.decode();
+                
+                const canvas = document.createElement('canvas');
+                canvas.width = mnist.width;
+                canvas.height = mnist.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(mnist, 0, 0);
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                
+                // Convert to tensor and normalize
+                const xs = tf.browser.fromPixels(imageData, 1)
+                    .reshape([60000, 28, 28, 1])
+                    .cast('float32')
+                    .div(255);
+                    
+                return xs;
             });
 
             this.ui.updateProgress('Processing dataset', 1);
             await new Promise(resolve => setTimeout(resolve, 500));
             this.ui.elements.progressContainer.style.display = 'none';
             
-            return mnist.train.images;
+            return data;
         } catch (error) {
             this.ui.updateStatus(`Error loading dataset: ${error.message}`);
             throw error;
