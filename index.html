@@ -312,36 +312,36 @@
                     errorRates: [],
                     errorTypes: new Map(),
                     peakErrorRate: 0,
-                    windowSize: 1000
+                    windowSize: 1000 // 1 second window for error rate calculation
                 };
 
                 this.running = false;
-                this.worker = null;
+                this.onUpdate = null;
             }
 
             generateErrorScenario() {
                 const scenarios = [
-                    // Type errors (safe)
+                    // Type errors
                     'null.toString()',
                     'undefined.method()',
                     '({}).nonexistent.property',
                     
-                    // Reference errors (safe)
+                    // Reference errors
                     'nonExistentVariable',
                     'undefinedFunction()',
                     
-                    // Async errors (safe)
+                    // Async errors
                     'Promise.race([Promise.reject("Test Error")])',
                     
-                    // Syntax errors (safe)
+                    // Syntax errors
                     'eval("{")',
                     'eval("function(){{")',
                     
-                    // URI errors (safe)
+                    // URI errors
                     'decodeURIComponent("%")',
                     'encodeURI("\uD800")',
                     
-                    // Range errors (safe)
+                    // Range errors
                     'new Array(-1)',
                     "Number.prototype.toString.call(null)"
                 ];
@@ -403,7 +403,6 @@
                 const currentErrorRate = (stats.errorRates.length / stats.windowSize) * 1000;
                 stats.peakErrorRate = Math.max(stats.peakErrorRate, currentErrorRate);
 
-                // Return all necessary stats for display
                 return {
                     errorsPerSecond: currentErrorRate,
                     successRate: (stats.successfulTests / stats.totalTests) * 100,
@@ -440,17 +439,8 @@
                 }
             }
 
-            onUpdate(callback) {
-                this.onUpdate = callback;
-            }
-
-
             stop() {
                 this.running = false;
-            }
-
-            getStats() {
-                return this.stats;
             }
         }
 
@@ -458,7 +448,6 @@
             constructor() {
                 this.dataPoints = [];
                 this.maxDataPoints = 50;
-                this.startTime = Date.now();
                 this.generator = new ErrorGenerator();
                 this.initializeElements();
                 this.setupControls();
@@ -482,7 +471,6 @@
                     statusBanner: document.getElementById('status-banner')
                 };
 
-                // Set up SVG for timeline
                 this.elements.errorTimeline.setAttribute('viewBox', '0 0 1000 500');
             }
 
@@ -511,10 +499,9 @@
                 this.elements.startButton.disabled = true;
                 this.elements.stopButton.disabled = false;
                 this.elements.activeIndicator.style.display = 'inline-block';
-                this.startTime = Date.now();
                 
+                this.generator.onUpdate = stats => this.updateDisplay(stats);
                 this.generator.start();
-                this.startUpdates();
             }
 
             stop() {
@@ -523,15 +510,6 @@
                 this.elements.activeIndicator.style.display = 'none';
                 
                 this.generator.stop();
-                if (this.updateInterval) {
-                    clearInterval(this.updateInterval);
-                }
-            }
-
-            startUpdates() {
-                this.generator.onUpdate = (stats) => {
-                    this.updateDisplay(stats);
-                };
             }
 
             updateDisplay(stats) {
@@ -561,6 +539,21 @@
                     setTimeout(() => {
                         this.elements.errorRate.classList.remove('error-pulse');
                     }, 500);
+                }
+            }
+
+            animateValue(element, value, suffix = '') {
+                const current = parseFloat(element.textContent);
+                const target = parseFloat(value);
+                if (isNaN(current) || isNaN(target)) {
+                    element.textContent = value.toFixed(1) + suffix;
+                    return;
+                }
+                const step = (target - current) / 10;
+                const newValue = current + step;
+                element.textContent = newValue.toFixed(1) + suffix;
+                if (Math.abs(target - newValue) > 0.1) {
+                    requestAnimationFrame(() => this.animateValue(element, value, suffix));
                 }
             }
 
@@ -622,8 +615,7 @@
 
             updateErrorTypes(errorTypes) {
                 this.elements.errorTypes.innerHTML = '';
-                
-                Array.from(errorTypes.entries()).forEach(([type, count]) => {
+                errorTypes.forEach(([type, count]) => {
                     const div = document.createElement('div');
                     div.className = 'error-type';
                     div.innerHTML = `${type}<span class="error-count">${count}</span>`;
