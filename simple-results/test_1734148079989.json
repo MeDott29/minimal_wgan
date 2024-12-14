@@ -1,0 +1,7 @@
+{
+  "id": 1734148079989,
+  "script": "\n            async function test(a, b) {\n                return a ** b;\n            }\n            test(33.15581358644679, 25.132276888731298);\n        ",
+  "success": true,
+  "result": 1.6410701091868856e+38,
+  "timestamp": "2024-12-14T03:47:59.989Z"
+}

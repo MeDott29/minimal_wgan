@@ -1,0 +1,10 @@
+{
+  "id": 1734148080905,
+  "script": "\n            async function test(a, b) {\n                return a.nonexistentMethod();\n            }\n            test(56.348570572332136, 75.01212171208473);\n        ",
+  "success": false,
+  "error": {
+    "message": "Execution error: a.nonexistentMethod is not a function",
+    "stack": "Error: Execution error: a.nonexistentMethod is not a function\n    at SimpleTestRunner.runTest (/home/ath/Desktop/wgan/simple-solution.js:94:23)\n    at async main (/home/ath/Desktop/wgan/simple-solution.js:163:24)"
+  },
+  "timestamp": "2024-12-14T03:48:00.906Z"
+}

@@ -1,0 +1,7 @@
+{
+  "id": 1734148080195,
+  "script": "\n            async function test(a, b) {\n                return `Template ${a} and ${b}`;\n            }\n            test(25.049177454233185, 68.82832379448129);\n        ",
+  "success": true,
+  "result": "Template 25.049177454233185 and 68.82832379448129",
+  "timestamp": "2024-12-14T03:48:00.195Z"
+}

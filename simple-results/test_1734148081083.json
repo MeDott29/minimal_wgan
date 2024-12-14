@@ -1,0 +1,10 @@
+{
+  "id": 1734148081083,
+  "script": "\n            async function test(a, b) {\n                return Promise.reject(new Error(\"async fail\"));\n            }\n            test(1.940165808153571, 56.03797809718907);\n        ",
+  "success": false,
+  "error": {
+    "message": "Execution error: async fail",
+    "stack": "Error: Execution error: async fail\n    at SimpleTestRunner.runTest (/home/ath/Desktop/wgan/simple-solution.js:94:23)\n    at async main (/home/ath/Desktop/wgan/simple-solution.js:163:24)"
+  },
+  "timestamp": "2024-12-14T03:48:01.085Z"
+}

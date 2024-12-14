@@ -1,0 +1,7 @@
+{
+  "id": 1734148081061,
+  "script": "\n            async function test(a, b) {\n                return Math.pow(a, b);\n            }\n            test(96.54409881612173, 82.68580129556395);\n        ",
+  "success": true,
+  "result": 1.2842145492621197e+164,
+  "timestamp": "2024-12-14T03:48:01.062Z"
+}

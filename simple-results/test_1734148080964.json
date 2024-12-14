@@ -1,0 +1,7 @@
+{
+  "id": 1734148080964,
+  "script": "\n            async function test(a, b) {\n                return [a, b].join(\"\");\n            }\n            test(71.52106622155489, 20.560452696360286);\n        ",
+  "success": true,
+  "result": "71.5210662215548920.560452696360286",
+  "timestamp": "2024-12-14T03:48:00.964Z"
+}

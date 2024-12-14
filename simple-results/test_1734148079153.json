@@ -1,0 +1,7 @@
+{
+  "id": 1734148079153,
+  "script": "\n            async function test(a, b) {\n                return Object.keys({a, b}).length;\n            }\n            test(94.66226071848831, 44.23290433724114);\n        ",
+  "success": true,
+  "result": 2,
+  "timestamp": "2024-12-14T03:47:59.153Z"
+}

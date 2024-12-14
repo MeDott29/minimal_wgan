@@ -1,0 +1,7 @@
+{
+  "id": 1734148079275,
+  "script": "\n            async function test(a, b) {\n                return new Promise(r => setTimeout(r, 50)).then(() => a + b);\n            }\n            test(77.18146043641102, 53.304548518045046);\n        ",
+  "success": true,
+  "result": 130.48600895445605,
+  "timestamp": "2024-12-14T03:47:59.331Z"
+}

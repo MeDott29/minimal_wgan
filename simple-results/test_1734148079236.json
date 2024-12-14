@@ -1,0 +1,10 @@
+{
+  "id": 1734148079236,
+  "script": "\n            async function test(a, b) {\n                return undefined.prop;\n            }\n            test(67.4912774878927, 77.95596204730613);\n        ",
+  "success": false,
+  "error": {
+    "message": "Execution error: Cannot read properties of undefined (reading 'prop')",
+    "stack": "Error: Execution error: Cannot read properties of undefined (reading 'prop')\n    at SimpleTestRunner.runTest (/home/ath/Desktop/wgan/simple-solution.js:94:23)\n    at async main (/home/ath/Desktop/wgan/simple-solution.js:163:24)"
+  },
+  "timestamp": "2024-12-14T03:47:59.237Z"
+}

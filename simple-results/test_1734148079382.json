@@ -1,0 +1,10 @@
+{
+  "id": 1734148079382,
+  "script": "\n            async function test(a, b) {\n                return new Promise((_, r) => r(\"failed\"));\n            }\n            test(88.64676991759582, 27.405408085126393);\n        ",
+  "success": false,
+  "error": {
+    "message": "Execution error: undefined",
+    "stack": "Error: Execution error: undefined\n    at SimpleTestRunner.runTest (/home/ath/Desktop/wgan/simple-solution.js:94:23)\n    at async main (/home/ath/Desktop/wgan/simple-solution.js:163:24)"
+  },
+  "timestamp": "2024-12-14T03:47:59.383Z"
+}

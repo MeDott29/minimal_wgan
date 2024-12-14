@@ -1,0 +1,10 @@
+{
+  "id": 1734148080932,
+  "script": "\n            async function test(a, b) {\n                return b.impossible.chain.of.properties;\n            }\n            test(17.349009592213726, 99.56083596128116);\n        ",
+  "success": false,
+  "error": {
+    "message": "Execution error: Cannot read properties of undefined (reading 'chain')",
+    "stack": "Error: Execution error: Cannot read properties of undefined (reading 'chain')\n    at SimpleTestRunner.runTest (/home/ath/Desktop/wgan/simple-solution.js:94:23)\n    at async main (/home/ath/Desktop/wgan/simple-solution.js:163:24)"
+  },
+  "timestamp": "2024-12-14T03:48:00.932Z"
+}

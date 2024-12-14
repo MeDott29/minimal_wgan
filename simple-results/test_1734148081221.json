@@ -1,0 +1,7 @@
+{
+  "id": 1734148081221,
+  "script": "\n            async function test(a, b) {\n                return a.toString().padStart(b, \"0\");\n            }\n            test(5.196162452130548, 15.764008774434647);\n        ",
+  "success": true,
+  "result": "5.196162452130548",
+  "timestamp": "2024-12-14T03:48:01.221Z"
+}

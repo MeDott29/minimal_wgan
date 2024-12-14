@@ -1,0 +1,7 @@
+{
+  "id": 1734148079679,
+  "script": "\n            async function test(a, b) {\n                return isNaN(a / b);\n            }\n            test(96.74118414689524, 58.65177653509881);\n        ",
+  "success": true,
+  "result": false,
+  "timestamp": "2024-12-14T03:47:59.681Z"
+}

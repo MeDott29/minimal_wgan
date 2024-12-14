@@ -1,0 +1,7 @@
+{
+  "id": 1734148079630,
+  "script": "\n            async function test(a, b) {\n                return Array.isArray([a, b]);\n            }\n            test(54.559733653211474, 41.97032556390505);\n        ",
+  "success": true,
+  "result": true,
+  "timestamp": "2024-12-14T03:47:59.631Z"
+}

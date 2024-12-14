@@ -1,0 +1,10 @@
+{
+  "id": 1734148081117,
+  "script": "\n            async function test(a, b) {\n                return JSON.parse(JSON.stringify({a, b}));\n            }\n            test(4.660035181562905, 93.03852927778951);\n        ",
+  "success": true,
+  "result": {
+    "a": 4.660035181562905,
+    "b": 93.03852927778951
+  },
+  "timestamp": "2024-12-14T03:48:01.117Z"
+}
