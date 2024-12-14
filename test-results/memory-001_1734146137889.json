@@ -1,0 +1,12 @@
+{
+  "scriptId": "memory-001",
+  "success": false,
+  "error": {
+    "name": "Error",
+    "message": "Script execution timed out after 5000ms",
+    "stack": "Error: Script execution timed out after 5000ms\n    at Script.runInContext (node:vm:149:12)\n    at ScriptEnvironment.executeScript (/home/ath/Desktop/wgan/script-environment.js:189:35)\n    at async TestRunner.runScriptTests (/home/ath/Desktop/wgan/run-tests.js:60:36)\n    at async main (/home/ath/Desktop/wgan/run-tests.js:154:9)"
+  },
+  "logs": [],
+  "errors": [],
+  "executionTime": 5010.224684
+}

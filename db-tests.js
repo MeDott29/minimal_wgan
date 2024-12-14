@@ -1,4 +1,4 @@
-// test-db.js
+// db-tests.js
 const SimpleDB = require('./simple-db');
 const fs = require('node:fs').promises;
 const path = require('node:path');
@@ -123,7 +123,19 @@ class DBTester {
             assert(error.message.includes('not found'));
         }
         
-        // Test delete
+        console.log('Update tests passed! ✅');
+    }
+
+    async testDelete() {
+        console.log('\nTesting Delete...');
+        
+        // Create test document
+        const doc = await this.db.create('users', {
+            name: 'Delete Test',
+            email: 'delete@example.com'
+        });
+        
+        // Test successful delete
         const deleted = await this.db.delete('users', doc.id);
         assert.equal(deleted, true, 'Delete should return true');
         
