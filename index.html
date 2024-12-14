@@ -403,6 +403,7 @@
                 const currentErrorRate = (stats.errorRates.length / stats.windowSize) * 1000;
                 stats.peakErrorRate = Math.max(stats.peakErrorRate, currentErrorRate);
 
+                // Return all necessary stats for display
                 return {
                     errorsPerSecond: currentErrorRate,
                     successRate: (stats.successfulTests / stats.totalTests) * 100,
@@ -416,7 +417,7 @@
                 };
             }
 
-           async start() {
+            async start() {
                 if (this.running) return;
                 this.running = true;
                 this.stats.testStartTime = Date.now();
@@ -424,19 +425,23 @@
 
                 while (this.running) {
                     try {
-                         console.log('Running batch of tests...'); // Add this line
                         const results = await Promise.all(
                             Array(5).fill(0).map(() => this.runTest())
                         );
-                        results.forEach(result => {
-                            const updatedStats = this.updateStats(result);
-                            console.log('Updated stats:', updatedStats); // Add this line
-                        });
+                        const updatedStats = results.map(result => this.updateStats(result));
+                        // Return the last updated stats
+                        if (this.onUpdate) {
+                            this.onUpdate(updatedStats[updatedStats.length - 1]);
+                        }
                         await new Promise(resolve => setTimeout(resolve, 100));
                     } catch (error) {
                         console.error('Batch error:', error);
                     }
                 }
+            }
+
+            onUpdate(callback) {
+                this.onUpdate = callback;
             }
 
 
@@ -524,26 +529,25 @@
             }
 
             startUpdates() {
-                this.updateInterval = setInterval(() => {
-                    const stats = this.generator.getStats();
-                     console.log('Current stats:', stats); // Add this line
+                this.generator.onUpdate = (stats) => {
                     this.updateDisplay(stats);
-                }, 100);
+                };
             }
 
             updateDisplay(stats) {
-                // Update simple stats
-                this.elements.errorRate.textContent = `${stats.errorsPerSecond.toFixed(1)}/s`;
-                this.elements.successRate.textContent = `${stats.successRate.toFixed(1)}%`;
+                if (!stats) return;
+
+                // Update simple stats with animation
+                this.animateValue(this.elements.errorRate, stats.errorsPerSecond, '/s');
+                this.animateValue(this.elements.successRate, stats.successRate, '%');
                 this.elements.totalTests.textContent = stats.totalTests.toString();
-                this.elements.runtime.textContent = `${((Date.now() - this.startTime) / 1000).toFixed(1)}s`;
+                this.elements.runtime.textContent = `${stats.runtime.toFixed(1)}s`;
 
                 // Update system status
-                this.elements.peakErrorRate.textContent = `${stats.peakErrorRate.toFixed(1)}/s`;
-                this.elements.avgComplexity.textContent = stats.avgComplexity.toFixed(1);
+                this.animateValue(this.elements.peakErrorRate, stats.peakErrorRate, '/s');
+                this.animateValue(this.elements.avgComplexity, stats.avgComplexity);
                 this.elements.failedTests.textContent = stats.failedTests;
-                this.elements.successRatio.textContent = 
-                    (stats.successfulTests / Math.max(stats.failedTests, 1)).toFixed(2);
+                this.elements.successRatio.textContent = stats.successRatio.toFixed(2);
 
                 // Update timeline
                 this.updateTimeline(stats.errorsPerSecond);
