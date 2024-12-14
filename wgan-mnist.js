@@ -272,46 +272,31 @@ class TrainingController {
     }
 
     async train() {
-        if (!this.trainImages) {
-            this.trainImages = await this.loadMNIST();
-        }
+        try {
+            if (!this.trainImages) {
+                const dataset = await this.loadMNIST();
+                // Convert the generator result to a tensor
+                this.trainImages = await dataset.next();
+                this.trainImages = this.trainImages.value; // Extract the tensor from generator result
+            }
 
-        this.ui.updateStatus('Training started...');
-        const batchesPerEpoch = Math.floor(this.trainImages.shape[0] / this.wgan.batchSize);
+            this.ui.updateStatus('Training started...');
+            // Calculate batches based on the actual tensor shape
+            const numSamples = this.trainImages.shape[0];
+            const batchesPerEpoch = Math.floor(numSamples / this.wgan.batchSize);
 
-        for (let epoch = 0; epoch < this.numEpochs && this.isTraining; epoch++) {
+            // Shuffle the dataset at the start of each epoch
+            const indices = tf.util.createShuffledIndices(numSamples);
+            
             for (let batch = 0; batch < batchesPerEpoch && this.isTraining; batch++) {
-                const start = batch * this.wgan.batchSize;
-                const batchImages = this.trainImages.slice(
-                    [start, 0, 0, 0],
-                    [this.wgan.batchSize, 28, 28, 1]
-                );
+                const startIdx = batch * this.wgan.batchSize;
+                const batchIndices = indices.slice(startIdx, startIdx + this.wgan.batchSize);
+                
+                // Get batch images using gathered indices
+                const batchImages = tf.tidy(() => {
+                    return tf.gather(this.trainImages, batchIndices);
+                });
 
-                // Train discriminator multiple times
-                let dLoss = 0;
-                for (let i = 0; i < 5; i++) {
-                    dLoss = await this.wgan.trainDiscriminator(batchImages);
-                }
-
-                // Train generator once
-                const gLoss = await this.wgan.trainGenerator();
-
-                // Update UI
-                this.ui.updateMetrics(
-                    epoch + 1,
-                    this.numEpochs,
-                    dLoss.dataSync()[0],
-                    gLoss.dataSync()[0]
-                );
-
-                if (batch % 10 === 0) {
-                    const generatedImage = this.wgan.generateImage();
-                    this.ui.displayImage(generatedImage.reshape([28, 28]));
-                    tf.dispose(generatedImage);
-                }
-
-                tf.dispose([batchImages, dLoss, gLoss]);
-                await tf.nextFrame(); // Allow UI to update
             }
         }
 
@@ -322,7 +307,13 @@ class TrainingController {
             this.isTraining = false;
             this.ui.setTrainingState(false);
         }
+    } catch (error) {
+        this.ui.updateStatus(`Training error: ${error.message}`);
+        console.error(error);
+        this.isTraining = false;
+        this.ui.setTrainingState(false);
     }
+}
 
     async toggleTraining() {
         if (!this.isTraining) {
