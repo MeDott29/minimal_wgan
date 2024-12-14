@@ -124,6 +124,18 @@
             </div>
 
             <div class="card">
+                <h3>Total Runs</h3>
+                <div class="metric" id="totalRuns">0</div>
+                <div id="runsPerScript">0 runs/script</div>
+            </div>
+
+            <div class="card">
+                <h3>Manual Interventions</h3>
+                <div class="metric" id="manualScripts">0</div>
+                <div id="manualPercentage">0% of total scripts</div>
+            </div>
+
+            <div class="card">
                 <h3>Estimated Time to Goal</h3>
                 <div class="metric" id="timeToGoal">--</div>
                 <div id="timeToGoalDetail">at current rate</div>
@@ -154,16 +166,33 @@
 
             async fetchMetrics() {
                 try {
-                    // This would normally be an API call - for demo, generate mock data
-                    const mockData = this.generateMockData();
-                    this.metricsHistory.push(mockData);
+                    // Try to fetch real data
+                    const response = await fetch('/api/metrics/report');
+                    if (!response.ok) {
+                        throw new Error('API not available');
+                    }
+                    const data = await response.json();
+                    
+                    // Transform API data to match dashboard format
+                    const transformedData = {
+                        totalErrors: data.progress.currentErrors,
+                        errorRate: data.rate.errorsPerMinute,
+                        totalScripts: data.metrics.total_scripts,
+                        avgCharsPerScript: data.metrics.avg_chars_per_script,
+                        totalRuns: data.metrics.total_runs,
+                        manualScripts: data.metrics.total_manual_scripts,
+                        timestamp: data.timestamp
+                    };
+
+                    this.metricsHistory.push(transformedData);
                     if (this.metricsHistory.length > 50) {
                         this.metricsHistory.shift();
                     }
-                    return mockData;
+                    return transformedData;
                 } catch (error) {
-                    console.error('Error fetching metrics:', error);
-                    return null;
+                    console.warn('Falling back to mock ', error);
+                    // Fallback to mock data to keep dashboard alive
+                    return this.generateMockData();
                 }
             }
 
@@ -189,7 +218,7 @@
                 this.fetchMetrics().then(metrics => {
                     if (!metrics) return;
 
-                    // Update metrics displays
+                    // Update existing metrics displays
                     document.getElementById('totalErrors').textContent = 
                         metrics.totalErrors.toLocaleString();
                     document.getElementById('errorRate').textContent = 
@@ -198,6 +227,21 @@
                         metrics.totalScripts.toLocaleString();
                     document.getElementById('avgCharsPerScript').textContent = 
                         `${Math.round(metrics.avgCharsPerScript)} chars/script`;
+
+                    // Update new metrics displays
+                    if ('totalRuns' in metrics) {
+                        document.getElementById('totalRuns').textContent = 
+                            metrics.totalRuns.toLocaleString();
+                        document.getElementById('runsPerScript').textContent = 
+                            `${(metrics.totalRuns / metrics.totalScripts || 0).toFixed(1)} runs/script`;
+                    }
+
+                    if ('manualScripts' in metrics) {
+                        document.getElementById('manualScripts').textContent = 
+                            metrics.manualScripts.toLocaleString();
+                        document.getElementById('manualPercentage').textContent = 
+                            `${((metrics.manualScripts / metrics.totalScripts) * 100).toFixed(1)}% of total scripts`;
+                    }
 
                     // Update progress bar
                     const progress = (metrics.totalErrors / 1000000) * 100;
