@@ -1,0 +1,7 @@
+{
+  "id": 5,
+  "timestamp": "2024-12-14T01:47:42.378Z",
+  "script_id": 5,
+  "error_message": "ReferenceError: x is not defined",
+  "stack_trace": "at Object.<anonymous> (/test.js:1:1)"
+}

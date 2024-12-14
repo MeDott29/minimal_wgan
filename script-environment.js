@@ -1,99 +1,105 @@
-const { NodeVM, VMScript } = require('vm2');
-const fs = require('fs').promises;
-const path = require('path');
+// script-environment.js
+const vm = require('node:vm');
+const fs = require('node:fs').promises;
+const path = require('node:path');
 
 class ScriptEnvironment {
     constructor(options = {}) {
         this.timeout = options.timeout || 1000;
-        this.scriptsDir = options.scriptsDir || './generated-scripts';
-        this.resultsDir = options.resultsDir || './execution-results';
-        this.logsDir = options.logsDir || './execution-logs';
-        this.vm = new NodeVM({
-            console: 'inherit',
-            timeout: this.timeout,
-            sandbox: {},
-            require: {
-                external: true,
-                builtin: ['fs', 'path', 'util', 'events', 'stream', 'string_decoder', 'assert', 'async_hooks', 'timers', 'zlib']
-            }
-        });
+        this.scriptsDir = options.scriptsDir || './test-scripts';
+        this.resultsDir = options.resultsDir || './test-results';
+        this.logsDir = options.logsDir || './test-logs';
     }
 
     async init() {
-        await this.ensureDirectoryExists(this.scriptsDir);
-        await this.ensureDirectoryExists(this.resultsDir);
-        await this.ensureDirectoryExists(this.logsDir);
+        await Promise.all([
+            fs.mkdir(this.scriptsDir, { recursive: true }),
+            fs.mkdir(this.resultsDir, { recursive: true }),
+            fs.mkdir(this.logsDir, { recursive: true })
+        ]);
     }
 
-    async ensureDirectoryExists(dirPath) {
-        try {
-            await fs.mkdir(dirPath, { recursive: true });
-        } catch (error) {
-            if (error.code !== 'EEXIST') {
-                throw error;
-            }
-        }
+    createContext() {
+        // Create a new context with limited capabilities
+        return vm.createContext({
+            console: {
+                log: (...args) => this.logs.push(args.join(' ')),
+                error: (...args) => this.errors.push(args.join(' '))
+            },
+            Math,
+            Date,
+            Array,
+            Object,
+            String,
+            Number,
+            Boolean,
+            Error
+        });
     }
 
-    async executeScript(scriptContent, scriptName) {
-        const scriptId = `${scriptName}-${Date.now()}`;
-        const scriptPath = path.join(this.scriptsDir, `${scriptId}.js`);
-        const resultPath = path.join(this.resultsDir, `${scriptId}.json`);
-        const logPath = path.join(this.logsDir, `${scriptId}.log`);
+    async executeScript(scriptContent, scriptId) {
+        this.logs = [];
+        this.errors = [];
+        const startTime = Date.now();
 
         try {
-            // Save the script to a file
+            // Save script to file for reference
+            const scriptPath = path.join(this.scriptsDir, `${scriptId}.js`);
             await fs.writeFile(scriptPath, scriptContent);
 
-            // Capture console output
-            const logStream = fs.createWriteStream(logPath);
-            const originalConsoleLog = console.log;
-            console.log = (...args) => {
-                logStream.write(util.format(...args) + '\n');
-                originalConsoleLog(...args);
-            };
+            // Create context and run script
+            const context = this.createContext();
+            const script = new vm.Script(scriptContent);
+            const result = script.runInContext(context, {
+                timeout: this.timeout,
+                displayErrors: true
+            });
 
-            // Execute the script
-            const script = new VMScript(scriptContent, scriptPath);
-            const result = this.vm.run(script);
-
-            // Save the result
-            await fs.writeFile(resultPath, JSON.stringify({ result }, null, 2));
-
-            return {
+            const executionData = {
+                scriptId,
                 success: true,
                 result,
-                logs: await fs.readFile(logPath, 'utf-8'),
-                scriptId
+                logs: this.logs,
+                errors: this.errors,
+                executionTime: Date.now() - startTime
             };
-        } catch (error) {
-            // Save the error
-            await fs.writeFile(resultPath, JSON.stringify({ error: error.message }, null, 2));
 
-            return {
+            // Save results
+            const resultPath = path.join(this.resultsDir, `${scriptId}_${startTime}.json`);
+            await fs.writeFile(resultPath, JSON.stringify(executionData, null, 2));
+
+            return executionData;
+
+        } catch (error) {
+            const errorData = {
+                scriptId,
                 success: false,
-                error: error.message,
-                logs: await fs.readFile(logPath, 'utf-8'),
-                scriptId
+                error: {
+                    name: error.name,
+                    message: error.message,
+                    stack: error.stack
+                },
+                logs: this.logs,
+                errors: this.errors,
+                executionTime: Date.now() - startTime
             };
-        } finally {
-            // Restore console.log
-            console.log = originalConsoleLog;
+
+            // Save error results
+            const resultPath = path.join(this.resultsDir, `${scriptId}_${startTime}.json`);
+            await fs.writeFile(resultPath, JSON.stringify(errorData, null, 2));
+
+            return errorData;
         }
     }
 
-    async getScriptHistory(scriptName) {
+    async getScriptHistory(scriptId) {
         const files = await fs.readdir(this.resultsDir);
         const history = [];
 
         for (const file of files) {
-            if (file.startsWith(scriptName) && file.endsWith('.json')) {
-                const filePath = path.join(this.resultsDir, file);
-                const data = JSON.parse(await fs.readFile(filePath, 'utf-8'));
-                history.push({
-                    scriptId: file.replace('.json', ''),
-                    ...data
-                });
+            if (file.startsWith(scriptId) && file.endsWith('.json')) {
+                const content = await fs.readFile(path.join(this.resultsDir, file), 'utf8');
+                history.push(JSON.parse(content));
             }
         }
 

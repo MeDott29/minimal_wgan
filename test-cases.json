@@ -1,0 +1,14 @@
+{
+  "testCases": [
+    {
+      "id": "test-001",
+      "description": "Basic arithmetic operations",
+      "script": "const a = 5;\nconst b = 3;\nconsole.log('Adding numbers...');\nconst sum = a + b;\nconst product = a * b;\n\n({ sum, product })",
+      "expectedOutput": {
+        "sum": 8,
+        "product": 15
+      },
+      "shouldSucceed": true
+    }
+  ]
+}
