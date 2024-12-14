@@ -1,0 +1,19 @@
+{
+  "id": 1734150218032,
+  "script": "\n                (async () => {\n                    ({}).nonexistent.property\n                })()\n            ",
+  "complexity": 119,
+  "metrics": {
+    "length": 111,
+    "operations": 8,
+    "branches": 0,
+    "functionCalls": 0,
+    "variables": 0
+  },
+  "success": false,
+  "duration": 2,
+  "timestamp": "2024-12-14T04:23:38.032Z",
+  "error": {
+    "message": "Cannot read properties of undefined (reading 'property')",
+    "type": "TypeError"
+  }
+}

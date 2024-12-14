@@ -25,14 +25,12 @@ class ErrorGenerator {
             peakErrorRate: 0
         };
 
-        // Buffer for logging
-        this.logBuffer = [];
         this.isDisplaying = false;
     }
 
     async initialize() {
         await fs.mkdir(this.config.resultsDir, { recursive: true });
-        console.clear(); // Safer than direct terminal commands
+        console.clear();
         this.setupCleanupHandlers();
         await this.updateDisplay();
     }
@@ -125,10 +123,11 @@ class ErrorGenerator {
             timestamp: new Date().toISOString()
         };
 
-        if (!error) {
+        // Fix: Only add error information if there IS an error
+        if (!success && error) {
             testResult.error = {
-                message: error?.message || 'Unknown error',
-                type: error?.constructor?.name || 'Unknown'
+                message: error.message || 'Unknown error',
+                type: error.constructor.name || 'Unknown'
             };
         }
 
@@ -144,8 +143,8 @@ class ErrorGenerator {
         
         stats.totalComplexity += result.complexity;
 
-        if (!result.success) {
-            const errorType = result.error.type;
+        if (!result.success && result.error) {
+            const errorType = result.error.type || 'Unknown';
             stats.errorTypes.set(errorType, (stats.errorTypes.get(errorType) || 0) + 1);
             stats.errorRates.push({ timestamp: Date.now() });
         }
@@ -171,7 +170,7 @@ class ErrorGenerator {
         try {
             const stats = this.stats;
             const runtime = ((Date.now() - stats.testStartTime) / 1000).toFixed(1);
-            const successRate = ((stats.successfulTests / stats.totalTests) * 100).toFixed(1);
+            const successRate = ((stats.successfulTests / stats.totalTests) * 100 || 0).toFixed(1);
             const avgComplexity = (stats.totalComplexity / stats.totalTests || 0).toFixed(1);
             const currentErrorRate = this.calculateErrorRate().toFixed(1);
 
@@ -184,7 +183,7 @@ Error Generator Status
 ---------------------
 Error Rate: ${currentErrorRate} errors/sec
 Peak Rate: ${stats.peakErrorRate.toFixed(1)} errors/sec
-Error Types: ${errorTypes}
+Error Types: ${errorTypes || 'None'}
 
 Total Tests: ${stats.totalTests}
 Failed Tests: ${stats.failedTests}
@@ -201,12 +200,15 @@ Runtime: ${runtime}s
     }
 
     async saveResult(result) {
-        const filename = path.join(this.config.resultsDir, `test_${result.id}.json`);
-        await fs.writeFile(filename, JSON.stringify(result, null, 2))
-            .catch(error => console.error('Failed to save result:', error));
+        try {
+            const filename = path.join(this.config.resultsDir, `test_${result.id}.json`);
+            await fs.writeFile(filename, JSON.stringify(result, null, 2));
 
-        if (this.stats.totalTests % this.config.cleanupInterval === 0) {
-            this.cleanupOldResults().catch(error => console.error('Cleanup failed:', error));
+            if (this.stats.totalTests % this.config.cleanupInterval === 0) {
+                await this.cleanupOldResults();
+            }
+        } catch (error) {
+            console.error('Failed to save result:', error);
         }
     }
 

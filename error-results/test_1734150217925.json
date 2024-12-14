@@ -1,0 +1,22 @@
+{
+  "id": 1734150217925,
+  "script": "\n                (async () => {\n                    new Array(-1)\n                })()\n            ",
+  "complexity": 109,
+  "metrics": {
+    "length": 99,
+    "operations": 9,
+    "branches": 0,
+    "functionCalls": 1,
+    "variables": 0
+  },
+  "success": false,
+  "duration": 15,
+  "timestamp": "2024-12-14T04:23:37.925Z",
+  "error": {
+    "message": "Invalid array length",
+    "type": "RangeError"
+  }
+})",
+    "type": "TypeError"
+  }
+}

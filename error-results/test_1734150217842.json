@@ -1,0 +1,19 @@
+{
+  "id": 1734150217842,
+  "script": "\n                (async () => {\n                    undefined.method()\n                })()\n            ",
+  "complexity": 113,
+  "metrics": {
+    "length": 104,
+    "operations": 8,
+    "branches": 0,
+    "functionCalls": 1,
+    "variables": 0
+  },
+  "success": false,
+  "duration": 18,
+  "timestamp": "2024-12-14T04:23:37.842Z",
+  "error": {
+    "message": "Cannot read properties of undefined (reading 'method')",
+    "type": "TypeError"
+  }
+}

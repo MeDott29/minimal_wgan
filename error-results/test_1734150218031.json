@@ -1,0 +1,19 @@
+{
+  "id": 1734150218031,
+  "script": "\n                (async () => {\n                    eval(\"function(){{\")\n                })()\n            ",
+  "complexity": 118,
+  "metrics": {
+    "length": 106,
+    "operations": 10,
+    "branches": 0,
+    "functionCalls": 2,
+    "variables": 0
+  },
+  "success": false,
+  "duration": 1,
+  "timestamp": "2024-12-14T04:23:38.031Z",
+  "error": {
+    "message": "Function statements require a function name",
+    "type": "SyntaxError"
+  }
+}

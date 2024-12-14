@@ -1,0 +1,19 @@
+{
+  "id": 1734150217844,
+  "script": "\n                (async () => {\n                    null.toString()\n                })()\n            ",
+  "complexity": 110,
+  "metrics": {
+    "length": 101,
+    "operations": 8,
+    "branches": 0,
+    "functionCalls": 1,
+    "variables": 0
+  },
+  "success": false,
+  "duration": 20,
+  "timestamp": "2024-12-14T04:23:37.844Z",
+  "error": {
+    "message": "Cannot read properties of null (reading 'toString')",
+    "type": "TypeError"
+  }
+}

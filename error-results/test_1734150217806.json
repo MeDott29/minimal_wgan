@@ -1,0 +1,19 @@
+{
+  "id": 1734150217806,
+  "script": "\n                (async () => {\n                    nonExistentVariable\n                })()\n            ",
+  "complexity": 111,
+  "metrics": {
+    "length": 105,
+    "operations": 6,
+    "branches": 0,
+    "functionCalls": 0,
+    "variables": 0
+  },
+  "success": false,
+  "duration": 9,
+  "timestamp": "2024-12-14T04:23:37.806Z",
+  "error": {
+    "message": "nonExistentVariable is not defined",
+    "type": "ReferenceError"
+  }
+}

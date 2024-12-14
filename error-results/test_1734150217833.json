@@ -1,0 +1,19 @@
+{
+  "id": 1734150217833,
+  "script": "\n                (async () => {\n                    Number.prototype.toString.call(null)\n                })()\n            ",
+  "complexity": 131,
+  "metrics": {
+    "length": 122,
+    "operations": 8,
+    "branches": 0,
+    "functionCalls": 1,
+    "variables": 0
+  },
+  "success": false,
+  "duration": 10,
+  "timestamp": "2024-12-14T04:23:37.833Z",
+  "error": {
+    "message": "Number.prototype.toString requires that 'this' be a Number",
+    "type": "TypeError"
+  }
+}

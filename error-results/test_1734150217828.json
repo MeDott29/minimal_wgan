@@ -1,0 +1,19 @@
+{
+  "id": 1734150217828,
+  "script": "\n                (async () => {\n                    eval(\"{\")\n                })()\n            ",
+  "complexity": 104,
+  "metrics": {
+    "length": 95,
+    "operations": 8,
+    "branches": 0,
+    "functionCalls": 1,
+    "variables": 0
+  },
+  "success": false,
+  "duration": 5,
+  "timestamp": "2024-12-14T04:23:37.828Z",
+  "error": {
+    "message": "Unexpected end of input",
+    "type": "SyntaxError"
+  }
+}
