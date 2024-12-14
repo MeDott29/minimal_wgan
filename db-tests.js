@@ -123,7 +123,9 @@ class DBTester {
             assert(error.message.includes('not found'));
         }
         
-        deleted, true, 'Delete should return true');
+        // Test delete
+        const deleted = await this.db.delete('users', doc.id);
+        assert.equal(deleted, true, 'Delete should return true');
         
         // Verify document is gone
         const notFound = await this.db.read('users', doc.id);
