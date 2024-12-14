@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Learning Metrics Dashboard</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --secondary: #475569;
+            --background: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+            --error: #ef4444;
+            --success: #22c55e;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: var(--background);
+            color: var(--text);
+        }
+
+        .dashboard {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .card h3 {
+            margin-top: 0;
+            color: var(--secondary);
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .metric {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary);
+            margin: 0.5rem 0;
+        }
+
+        .progress-container {
+            width: 100%;
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 4px;
+            margin: 1rem 0;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: var(--primary);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .chart-container {
+            height: 200px;
+            margin-top: 1rem;
+        }
+
+        .error-rate-chart {
+            width: 100%;
+            height: 100%;
+        }
+
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <div class="header">
+            <h1>AI Learning Metrics Dashboard</h1>
+            <p>Progress towards 1,000,000 errors goal</p>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <h3>Total Errors</h3>
+                <div class="metric" id="totalErrors">0</div>
+                <div class="progress-container">
+                    <div class="progress-bar" id="errorProgress" style="width: 0%"></div>
+                </div>
+                <div id="errorPercentage">0% Complete</div>
+            </div>
+
+            <div class="card">
+                <h3>Error Generation Rate</h3>
+                <div class="metric" id="errorRate">0/min</div>
+                <div id="errorRateChange">Current rate</div>
+            </div>
+
+            <div class="card">
+                <h3>Scripts Generated</h3>
+                <div class="metric" id="totalScripts">0</div>
+                <div id="avgCharsPerScript">0 chars/script</div>
+            </div>
+
+            <div class="card">
+                <h3>Estimated Time to Goal</h3>
+                <div class="metric" id="timeToGoal">--</div>
+                <div id="timeToGoalDetail">at current rate</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Error Generation Over Time</h3>
+            <div class="chart-container">
+                <canvas id="errorRateChart" class="error-rate-chart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class MetricsDashboard {
+            constructor() {
+                this.metricsHistory = [];
+                this.lastUpdate = null;
+                this.updateInterval = null;
+            }
+
+            initialize() {
+                // Start periodic updates
+                this.updateInterval = setInterval(() => this.updateDashboard(), 5000);
+                this.updateDashboard();
+            }
+
+            async fetchMetrics() {
+                try {
+                    // This would normally be an API call - for demo, generate mock data
+                    const mockData = this.generateMockData();
+                    this.metricsHistory.push(mockData);
+                    if (this.metricsHistory.length > 50) {
+                        this.metricsHistory.shift();
+                    }
+                    return mockData;
+                } catch (error) {
+                    console.error('Error fetching metrics:', error);
+                    return null;
+                }
+            }
+
+            generateMockData() {
+                // For demonstration - replace with real data
+                const lastMetric = this.metricsHistory[this.metricsHistory.length - 1] || {
+                    totalErrors: 0,
+                    errorRate: 0,
+                    totalScripts: 0,
+                    avgCharsPerScript: 0
+                };
+
+                return {
+                    totalErrors: lastMetric.totalErrors + Math.floor(Math.random() * 1000),
+                    errorRate: Math.max(0, lastMetric.errorRate + (Math.random() - 0.5) * 10),
+                    totalScripts: lastMetric.totalScripts + Math.floor(Math.random() * 100),
+                    avgCharsPerScript: Math.max(50, lastMetric.avgCharsPerScript + (Math.random() - 0.5) * 10),
+                    timestamp: new Date().toISOString()
+                };
+            }
+
+            updateDashboard() {
+                this.fetchMetrics().then(metrics => {
+                    if (!metrics) return;
+
+                    // Update metrics displays
+                    document.getElementById('totalErrors').textContent = 
+                        metrics.totalErrors.toLocaleString();
+                    document.getElementById('errorRate').textContent = 
+                        `${metrics.errorRate.toFixed(1)}/min`;
+                    document.getElementById('totalScripts').textContent = 
+                        metrics.totalScripts.toLocaleString();
+                    document.getElementById('avgCharsPerScript').textContent = 
+                        `${Math.round(metrics.avgCharsPerScript)} chars/script`;
+
+                    // Update progress bar
+                    const progress = (metrics.totalErrors / 1000000) * 100;
+                    document.getElementById('errorProgress').style.width = `${progress}%`;
+                    document.getElementById('errorPercentage').textContent = 
+                        `${progress.toFixed(2)}% Complete`;
+
+                    // Calculate and update time to goal
+                    const remainingErrors = 1000000 - metrics.totalErrors;
+                    const timeToGoal = metrics.errorRate > 0 
+                        ? remainingErrors / metrics.errorRate 
+                        : Infinity;
+                    
+                    document.getElementById('timeToGoal').textContent = 
+                        timeToGoal === Infinity 
+                            ? '--' 
+                            : this.formatDuration(timeToGoal);
+
+                    this.updateChart();
+                });
+            }
+
+            formatDuration(minutes) {
+                if (minutes < 60) {
+                    return `${Math.round(minutes)}m`;
+                } else if (minutes < 1440) {
+                    return `${Math.round(minutes / 60)}h`;
+                } else {
+                    return `${Math.round(minutes / 1440)}d`;
+                }
+            }
+
+            updateChart() {
+                const canvas = document.getElementById('errorRateChart');
+                const ctx = canvas.getContext('2d');
+                const width = canvas.width = canvas.parentNode.offsetWidth;
+                const height = canvas.height = canvas.parentNode.offsetHeight;
+
+                ctx.clearRect(0, 0, width, height);
+                ctx.strokeStyle = '#2563eb';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+
+                const data = this.metricsHistory;
+                if (data.length < 2) return;
+
+                const maxRate = Math.max(...data.map(d => d.errorRate));
+                const minRate = Math.min(...data.map(d => d.errorRate));
+                const range = maxRate - minRate || 1;
+
+                data.forEach((point, i) => {
+                    const x = (i / (data.length - 1)) * width;
+                    const y = height - ((point.errorRate - minRate) / range) * height;
+                    
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                });
+
+                ctx.stroke();
+            }
+        }
+
+        // Initialize dashboard
+        const dashboard = new MetricsDashboard();
+        dashboard.initialize();
+    </script>
+</body>
+</html>
