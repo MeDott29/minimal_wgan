@@ -274,6 +274,9 @@ async function main() {
     // Generate report
     const report = await metrics.generateReport();
     console.log(JSON.stringify(report, null, 2));
+    
+    const allScripts = await metrics.db.query('scripts');
+    console.log("All Scripts:", allScripts);
 }
 
 if (require.main === module) {
