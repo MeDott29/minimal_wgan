@@ -26,37 +26,14 @@ class ErrorGenerator {
         };
 
         // Initialize the TUI frame
-        this.frame = this.createFrame();
-        process.stdout.write(this.frame);
-    }
-
-    createFrame() {
-        return `
-╔════════════════════════════════════════════════════╗
-║              Error Generator Status                 ║
-╠════════════════════════════════════════════════════╣
-║                                                    ║
-║  Error Rate:     0 errors/sec                      ║
-║  Peak Rate:      0 errors/sec                      ║
-║                                                    ║
-║  Error Types:                                      ║
-║  None recorded yet                                 ║
-║                                                    ║
-║  Total Tests:    0                                 ║
-║  Failed Tests:   0                                 ║
-║  Success Rate:   0%                                ║
-║                                                    ║
-║  Complexity:     0                                 ║
-║  Runtime:        0s                                ║
-║                                                    ║
-╚════════════════════════════════════════════════════╝
-`;
     }
 
     async init() {
         await fs.mkdir(this.resultsDir, { recursive: true });
-        // Clear screen and hide cursor
-        process.stdout.write('\x1b[2J\x1b[0f\x1b[?25l');
+        // Clear screen once and hide cursor
+        process.stdout.write('\x1b[2J\x1b[H\x1b[?25l');
+        // Draw initial frame
+        await this.updateDisplay();
     }
 
     calculateComplexity(script) {
@@ -277,12 +254,11 @@ class ErrorGenerator {
             .map(([type, count]) => `║  ${type}: ${count}`.padEnd(50))
             .join('\n');
 
-        // Move cursor to start of frame
-        process.stdout.write('\x1b[0f');
+        // Move cursor to home position
+        process.stdout.write('\x1b[H');
 
         // Update frame with current stats
-        const frame = `
-╔════════════════════════════════════════════════════╗
+        const frame = `╔════════════════════════════════════════════════════╗
 ║              Error Generator Status                 ║
 ╠════════════════════════════════════════════════════╣
 ║                                                    ║
@@ -299,8 +275,8 @@ ${errorTypes}
 ║  Complexity:     ${avgComplexity.padEnd(8)}                    ║
 ║  Runtime:        ${runtime.padEnd(8)}s                   ║
 ║                                                    ║
-╚════════════════════════════════════════════════════╝
-`;
+╚════════════════════════════════════════════════════╝`;
+
         process.stdout.write(frame);
     }
 
