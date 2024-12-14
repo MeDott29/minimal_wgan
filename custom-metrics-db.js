@@ -256,8 +256,10 @@ async function main() {
     const metrics = new AIMetricsSystem();
     await metrics.init();
     
+    const scriptContent = await fs.readFile(__filename, 'utf-8');
+
     // Record a test script
-    const scriptId = await metrics.recordScript('console.log("test");');
+    const scriptId = await metrics.recordScript(scriptContent);
     
     // Record a test error
     await metrics.recordError(
