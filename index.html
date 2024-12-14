@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Error Generator Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background: #f3f4f6;
+            padding: 20px;
+            color: #1f2937;
+        }
+
+        .dashboard {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: none;
+            background: #3b82f6;
+            color: white;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        button:hover {
+            background: #2563eb;
+        }
+
+        button.stop {
+            background: #ef4444;
+        }
+
+        button.stop:hover {
+            background: #dc2626;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: #3b82f6;
+        }
+
+        .stat-card.error::after {
+            background: #ef4444;
+        }
+
+        .stat-card.success::after {
+            background: #10b981;
+        }
+
+        .stat-card-title {
+            font-size: 14px;
+            color: #6b7280;
+            margin-bottom: 8px;
+        }
+
+        .stat-card-value {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .chart-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .chart {
+            height: 300px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .error-types {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .error-type {
+            background: #e5e7eb;
+            padding: 8px 16px;
+            border-radius: 16px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: transform 0.2s;
+        }
+
+        .error-type:hover {
+            transform: translateY(-2px);
+        }
+
+        .error-count {
+            background: #1f2937;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .system-status {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .status-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .status-item-title {
+            font-size: 14px;
+            color: #6b7280;
+            margin-bottom: 4px;
+        }
+
+        .status-item-value {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .error-pulse {
+            animation: pulse 0.5s ease-in-out;
+        }
+
+        .active-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            margin-left: 8px;
+            animation: pulse 2s infinite;
+        }
+
+        .status-banner {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 8px;
+            background: #059669;
+            color: white;
+            font-weight: 500;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transform: translateX(200%);
+            transition: transform 0.3s ease-out;
+        }
+
+        .status-banner.show {
+            transform: translateX(0);
+        }
+
+        .status-banner.error {
+            background: #dc2626;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <div class="title">
+            Error Generator Dashboard
+            <div class="controls">
+                <button id="start-btn">Start Generator</button>
+                <button id="stop-btn" class="stop" disabled>Stop Generator</button>
+            </div>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card error">
+                <div class="stat-card-title">Current Error Rate</div>
+                <div class="stat-card-value" id="error-rate">0/s</div>
+            </div>
+            <div class="stat-card success">
+                <div class="stat-card-title">Success Rate</div>
+                <div class="stat-card-value" id="success-rate">0%</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-card-title">Total Tests</div>
+                <div class="stat-card-value" id="total-tests">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-card-title">Runtime</div>
+                <div class="stat-card-value" id="runtime">0s</div>
+            </div>
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-container">
+                <div class="chart-title">Error Rate Timeline</div>
+                <svg id="error-timeline" class="chart" preserveAspectRatio="none"></svg>
+            </div>
+            <div class="chart-container">
+                <div class="chart-title">Error Types</div>
+                <div id="error-types" class="error-types"></div>
+            </div>
+        </div>
+
+        <div class="system-status">
+            <div class="status-title">System Status <span id="active-indicator" class="active-indicator" style="display: none;"></span></div>
+            <div class="status-grid">
+                <div>
+                    <div class="status-item-title">Peak Error Rate</div>
+                    <div class="status-item-value" id="peak-error-rate">0/s</div>
+                </div>
+                <div>
+                    <div class="status-item-title">Average Complexity</div>
+                    <div class="status-item-value" id="avg-complexity">0</div>
+                </div>
+                <div>
+                    <div class="status-item-title">Failed Tests</div>
+                    <div class="status-item-value" id="failed-tests">0</div>
+                </div>
+                <div>
+                    <div class="status-item-title">Success/Error Ratio</div>
+                    <div class="status-item-value" id="success-ratio">0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="status-banner" class="status-banner">Generator Started</div>
+
+    <script>
+        class ErrorGenerator {
+            constructor() {
+                this.stats = {
+                    totalTests: 0,
+                    successfulTests: 0,
+                    failedTests: 0,
+                    totalComplexity: 0,
+                    testStartTime: Date.now(),
+                    errorRates: [],
+                    errorTypes: new Map(),
+                    peakErrorRate: 0,
+                    windowSize: 1000
+                };
+
+                this.running = false;
+                this.worker = null;
+            }
+
+            generateErrorScenario() {
+                const scenarios = [
+                    // Type errors (safe)
+                    'null.toString()',
+                    'undefined.method()',
+                    '({}).nonexistent.property',
+                    
+                    // Reference errors (safe)
+                    'nonExistentVariable',
+                    'undefinedFunction()',
+                    
+                    // Async errors (safe)
+                    'Promise.race([Promise.reject("Test Error")])',
+                    
+                    // Syntax errors (safe)
+                    'eval("{")',
+                    'eval("function(){{")',
+                    
+                    // URI errors (safe)
+                    'decodeURIComponent("%")',
+                    'encodeURI("\uD800")',
+                    
+                    // Range errors (safe)
+                    'new Array(-1)',
+                    "Number.prototype.toString.call(null)"
+                ];
+
+                return scenarios[Math.floor(Math.random() * scenarios.length)];
+            }
+
+            calculateComplexity(script) {
+                const metrics = {
+                    length: script.length,
+                    operations: (script.match(/[\+\-\*\/%\(\)]/g) || []).length,
+                    branches: (script.match(/if|else|switch|case|while|for|do/g) || []).length,
+                    functionCalls: (script.match(/\w+\(/g) || []).length,
+                    variables: new Set(script.match(/\b(?:let|const|var)\s+(\w+)/g) || []).size
+                };
+
+                return Object.values(metrics).reduce((sum, value) => sum + value, 0);
+            }
+
+            async runTest() {
+                const script = this.generateErrorScenario();
+                const complexity = this.calculateComplexity(script);
+                const startTime = Date.now();
+
+                try {
+                    await eval(`(async () => { ${script} })()`);
+                    return { success: true, complexity, duration: Date.now() - startTime };
+                } catch (error) {
+                    return {
+                        success: false,
+                        complexity,
+                        duration: Date.now() - startTime,
+                        error: {
+                            message: error.message,
+                            type: error.constructor.name
+                        }
+                    };
+                }
+            }
+
+            updateStats(result) {
+                const stats = this.stats;
+                stats.totalTests++;
+                
+                if (result.success) {
+                    stats.successfulTests++;
+                } else {
+                    stats.failedTests++;
+                    const errorType = result.error.type;
+                    stats.errorTypes.set(errorType, (stats.errorTypes.get(errorType) || 0) + 1);
+                    stats.errorRates.push({ timestamp: Date.now() });
+                }
+
+                stats.totalComplexity += result.complexity;
+
+                // Calculate current error rate
+                const now = Date.now();
+                stats.errorRates = stats.errorRates.filter(rate => now - rate.timestamp < stats.windowSize);
+                const currentErrorRate = (stats.errorRates.length / stats.windowSize) * 1000;
+                stats.peakErrorRate = Math.max(stats.peakErrorRate, currentErrorRate);
+
+                return {
+                    errorsPerSecond: currentErrorRate,
+                    successRate: (stats.successfulTests / stats.totalTests) * 100,
+                    totalTests: stats.totalTests,
+                    runtime: (now - stats.testStartTime) / 1000,
+                    peakErrorRate: stats.peakErrorRate,
+                    avgComplexity: stats.totalComplexity / stats.totalTests,
+                    failedTests: stats.failedTests,
+                    successRatio: stats.successfulTests / Math.max(stats.failedTests, 1),
+                    errorTypes: Array.from(stats.errorTypes.entries())
+                };
+            }
+
+           async start() {
+                if (this.running) return;
+                this.running = true;
+                this.stats.testStartTime = Date.now();
+                this.stats.errorRates = []; // Reset error rates on start
+
+                while (this.running) {
+                    try {
+                         console.log('Running batch of tests...'); // Add this line
+                        const results = await Promise.all(
+                            Array(5).fill(0).map(() => this.runTest())
+                        );
+                        results.forEach(result => {
+                            const updatedStats = this.updateStats(result);
+                            console.log('Updated stats:', updatedStats); // Add this line
+                        });
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                    } catch (error) {
+                        console.error('Batch error:', error);
+                    }
+                }
+            }
+
+
+            stop() {
+                this.running = false;
+            }
+
+            getStats() {
+                return this.stats;
+            }
+        }
+
+        class Dashboard {
+            constructor() {
+                this.dataPoints = [];
+                this.maxDataPoints = 50;
+                this.startTime = Date.now();
+                this.generator = new ErrorGenerator();
+                this.initializeElements();
+                this.setupControls();
+            }
+
+            initializeElements() {
+                this.elements = {
+                    errorRate: document.getElementById('error-rate'),
+                    successRate: document.getElementById('success-rate'),
+                    totalTests: document.getElementById('total-tests'),
+                    runtime: document.getElementById('runtime'),
+                    errorTimeline: document.getElementById('error-timeline'),
+                    errorTypes: document.getElementById('error-types'),
+                    peakErrorRate: document.getElementById('peak-error-rate'),
+                    avgComplexity: document.getElementById('avg-complexity'),
+                    failedTests: document.getElementById('failed-tests'),
+                    successRatio: document.getElementById('success-ratio'),
+                    activeIndicator: document.getElementById('active-indicator'),
+                    startButton: document.getElementById('start-btn'),
+                    stopButton: document.getElementById('stop-btn'),
+                    statusBanner: document.getElementById('status-banner')
+                };
+
+                // Set up SVG for timeline
+                this.elements.errorTimeline.setAttribute('viewBox', '0 0 1000 500');
+            }
+
+            setupControls() {
+                this.elements.startButton.addEventListener('click', () => {
+                    this.start();
+                    this.showStatusBanner('Generator Started', false);
+                });
+
+                this.elements.stopButton.addEventListener('click', () => {
+                    this.stop();
+                    this.showStatusBanner('Generator Stopped', true);
+                });
+            }
+
+            showStatusBanner(message, isError = false) {
+                this.elements.statusBanner.textContent = message;
+                this.elements.statusBanner.classList.toggle('error', isError);
+                this.elements.statusBanner.classList.add('show');
+                setTimeout(() => {
+                    this.elements.statusBanner.classList.remove('show');
+                }, 3000);
+            }
+
+            start() {
+                this.elements.startButton.disabled = true;
+                this.elements.stopButton.disabled = false;
+                this.elements.activeIndicator.style.display = 'inline-block';
+                this.startTime = Date.now();
+                
+                this.generator.start();
+                this.startUpdates();
+            }
+
+            stop() {
+                this.elements.startButton.disabled = false;
+                this.elements.stopButton.disabled = true;
+                this.elements.activeIndicator.style.display = 'none';
+                
+                this.generator.stop();
+                if (this.updateInterval) {
+                    clearInterval(this.updateInterval);
+                }
+            }
+
+            startUpdates() {
+                this.updateInterval = setInterval(() => {
+                    const stats = this.generator.getStats();
+                     console.log('Current stats:', stats); // Add this line
+                    this.updateDisplay(stats);
+                }, 100);
+            }
+
+            updateDisplay(stats) {
+                // Update simple stats
+                this.elements.errorRate.textContent = `${stats.errorsPerSecond.toFixed(1)}/s`;
+                this.elements.successRate.textContent = `${stats.successRate.toFixed(1)}%`;
+                this.elements.totalTests.textContent = stats.totalTests.toString();
+                this.elements.runtime.textContent = `${((Date.now() - this.startTime) / 1000).toFixed(1)}s`;
+
+                // Update system status
+                this.elements.peakErrorRate.textContent = `${stats.peakErrorRate.toFixed(1)}/s`;
+                this.elements.avgComplexity.textContent = stats.avgComplexity.toFixed(1);
+                this.elements.failedTests.textContent = stats.failedTests;
+                this.elements.successRatio.textContent = 
+                    (stats.successfulTests / Math.max(stats.failedTests, 1)).toFixed(2);
+
+                // Update timeline
+                this.updateTimeline(stats.errorsPerSecond);
+
+                // Update error types
+                this.updateErrorTypes(stats.errorTypes);
+
+                // Add pulse effect when errors occur
+                if (stats.errorsPerSecond > 0) {
+                    this.elements.errorRate.classList.add('error-pulse');
+                    setTimeout(() => {
+                        this.elements.errorRate.classList.remove('error-pulse');
+                    }, 500);
+                }
+            }
+
+            updateTimeline(currentRate) {
+                this.dataPoints.push(currentRate);
+                if (this.dataPoints.length > this.maxDataPoints) {
+                    this.dataPoints.shift();
+                }
+
+                const width = 1000;
+                const height = 500;
+                const maxRate = Math.max(...this.dataPoints, 10); // minimum scale of 10
+                const points = this.dataPoints.map((value, index) => {
+                    const x = (index / (this.maxDataPoints - 1)) * width;
+                    const y = height - (value / maxRate) * height;
+                    return `${x},${y}`;
+                }).join(' ');
+
+                // Create path
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', `M ${points}`);
+                path.setAttribute('fill', 'none');
+                path.setAttribute('stroke', '#ef4444');
+                path.setAttribute('stroke-width', '3');
+
+                // Create gradient fill
+                const grad = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
+                grad.setAttribute('id', 'lineGradient');
+                grad.setAttribute('x1', '0');
+                grad.setAttribute('x2', '0');
+                grad.setAttribute('y1', '0');
+                grad.setAttribute('y2', '1');
+
+                const stops = [
+                    { offset: '0%', color: 'rgba(239, 68, 68, 0.2)' },
+                    { offset: '100%', color: 'rgba(239, 68, 68, 0)' }
+                ];
+
+                stops.forEach(stop => {
+                    const stopEl = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+                    stopEl.setAttribute('offset', stop.offset);
+                    stopEl.setAttribute('stop-color', stop.color);
+                    grad.appendChild(stopEl);
+                });
+
+                // Create area fill
+                const area = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                area.setAttribute('d', `M ${points} L ${width},${height} L 0,${height} Z`);
+                area.setAttribute('fill', 'url(#lineGradient)');
+
+                // Clear and redraw
+                this.elements.errorTimeline.innerHTML = '';
+                const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+                defs.appendChild(grad);
+                this.elements.errorTimeline.appendChild(defs);
+                this.elements.errorTimeline.appendChild(area);
+                this.elements.errorTimeline.appendChild(path);
+            }
+
+            updateErrorTypes(errorTypes) {
+                this.elements.errorTypes.innerHTML = '';
+                
+                Array.from(errorTypes.entries()).forEach(([type, count]) => {
+                    const div = document.createElement('div');
+                    div.className = 'error-type';
+                    div.innerHTML = `${type}<span class="error-count">${count}</span>`;
+                    this.elements.errorTypes.appendChild(div);
+                });
+            }
+        }
+
+        // Initialize dashboard when page loads
+        window.addEventListener('load', () => {
+            window.dashboard = new Dashboard();
+        });
+    </script>
+</body>
+</html>
