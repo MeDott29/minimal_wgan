@@ -1,0 +1,12 @@
+{
+  "scriptId": "basic-001",
+  "success": true,
+  "result": {
+    "result": 8
+  },
+  "logs": [
+    "Computing..."
+  ],
+  "errors": [],
+  "executionTime": 6.367181000000002
+}

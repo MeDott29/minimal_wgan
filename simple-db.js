@@ -9,13 +9,12 @@ class SimpleDB {
         this.lockPath = path.join(this.dbPath, '.locks');
         this.dataPath = path.join(this.dbPath, 'data');
         this.indexPath = path.join(this.dbPath, 'indexes');
-        this.lockTimeout = options.lockTimeout || 5000; // 5 seconds
-        this.retryDelay = options.retryDelay || 100; // 100ms
+        this.lockTimeout = options.lockTimeout || 5000;
+        this.retryDelay = options.retryDelay || 100;
         this.maxRetries = options.maxRetries || 50;
     }
 
     async init() {
-        // Create database directory structure
         await Promise.all([
             fs.mkdir(this.dbPath, { recursive: true }),
             fs.mkdir(this.lockPath, { recursive: true }),
@@ -34,40 +33,35 @@ class SimpleDB {
 
         while (retries < this.maxRetries) {
             try {
-                // Try to create lock file
                 await fs.writeFile(lockFile, Date.now().toString(), { flag: 'wx' });
                 return lockFile;
             } catch (error) {
                 if (error.code === 'EEXIST') {
                     try {
-                        // Check if lock is stale
                         const stat = await fs.stat(lockFile);
-                        const age = Date.now() - stat.mtime;
-                        
-                        if (age > this.lockTimeout) {
-                            // Remove stale lock and retry
+                        if (Date.now() - stat.mtime > this.lockTimeout) {
                             await fs.unlink(lockFile);
                             continue;
                         }
                     } catch (statError) {
-                        // Lock file might have been removed
-                        continue;
+                        if (statError.code === 'ENOENT') continue;
+                        throw statError;
                     }
                 }
-                
                 retries++;
                 await new Promise(resolve => setTimeout(resolve, this.retryDelay));
             }
         }
-
-        throw new Error(`Failed to acquire lock for ${collection}:${id} after ${retries} retries`);
+        throw new Error(`Failed to acquire lock for ${collection}:${id}`);
     }
 
     async releaseLock(lockFile) {
         try {
             await fs.unlink(lockFile);
         } catch (error) {
-            console.error(`Error releasing lock ${lockFile}:`, error);
+            if (error.code !== 'ENOENT') {
+                console.error(`Error releasing lock ${lockFile}:`, error);
+            }
         }
     }
 
@@ -86,7 +80,6 @@ class SimpleDB {
     async create(collection, document) {
         await this.ensureCollection(collection);
         
-        // Generate ID if not provided
         const id = document.id || await this.generateId();
         document.id = id;
         
@@ -95,7 +88,6 @@ class SimpleDB {
         try {
             const docPath = this.getDocumentPath(collection, id);
             
-            // Check if document already exists
             try {
                 await fs.access(docPath);
                 throw new Error(`Document ${id} already exists in ${collection}`);
@@ -103,7 +95,6 @@ class SimpleDB {
                 if (error.code !== 'ENOENT') throw error;
             }
             
-            // Write document
             await fs.writeFile(docPath, JSON.stringify(document, null, 2));
             return document;
             
@@ -138,7 +129,6 @@ class SimpleDB {
                 throw new Error(`Document ${id} not found in ${collection}`);
             }
             
-            // Apply updates
             const updated = { ...document, ...updates, id };
             await fs.writeFile(
                 this.getDocumentPath(collection, id),
@@ -155,8 +145,7 @@ class SimpleDB {
         const lockFile = await this.acquireLock(collection, id);
         
         try {
-            const docPath = this.getDocumentPath(collection, id);
-            await fs.unlink(docPath);
+            await fs.unlink(this.getDocumentPath(collection, id));
             return true;
         } catch (error) {
             if (error.code === 'ENOENT') {
@@ -179,10 +168,10 @@ class SimpleDB {
             for (const file of files) {
                 if (!file.endsWith('.json')) continue;
                 
-                const id = file.slice(0, -5); // Remove .json
+                const id = file.slice(0, -5);
                 const doc = await this.read(collection, id);
                 
-                if (this.matchesQuery(doc, query)) {
+                if (doc && this.matchesQuery(doc, query)) {
                     documents.push(doc);
                 }
             }
@@ -198,8 +187,9 @@ class SimpleDB {
 
     matchesQuery(doc, query) {
         for (const [key, value] of Object.entries(query)) {
+            if (!doc.hasOwnProperty(key)) return false;
+            
             if (typeof value === 'object' && value !== null) {
-                // Handle operators
                 for (const [op, opValue] of Object.entries(value)) {
                     switch (op) {
                         case '$gt':
@@ -235,7 +225,6 @@ class SimpleDB {
         const documents = await this.find(collection);
         const index = {};
         
-        // Build index
         for (const doc of documents) {
             const value = doc[field];
             if (value === undefined) continue;
@@ -246,7 +235,6 @@ class SimpleDB {
             index[value].push(doc.id);
         }
         
-        // Save index
         const indexFile = path.join(this.indexPath, `${collection}_${field}.idx`);
         await fs.writeFile(indexFile, JSON.stringify(index, null, 2));
     }
@@ -271,7 +259,7 @@ class SimpleDB {
             return documents;
         } catch (error) {
             if (error.code === 'ENOENT') {
-                throw new Error(`Index not found for ${field} in ${collection}`);
+                return [];
             }
             throw error;
         }
@@ -283,7 +271,6 @@ class SimpleDB {
         
         await fs.mkdir(backupDir, { recursive: true });
         
-        // Copy data directory
         const copyDir = async (src, dest) => {
             await fs.mkdir(dest, { recursive: true });
             const entries = await fs.readdir(src, { withFileTypes: true });
