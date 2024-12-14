@@ -158,6 +158,17 @@ class AIMetricsSystem {
         });
     }
 
+    async incrementScriptRunCount(scriptId) {
+        const script = await this.db.get('scripts', scriptId);
+        if (script) {
+            script.run_count++;
+            // Overwrite the existing script file with the updated data
+            const fileName = this.db.indexes.scripts.id.get(scriptId);
+            const filePath = path.join(this.db.tables.scripts, fileName);
+            await fs.writeFile(filePath, JSON.stringify(script, null, 2));
+        }
+    }
+
     async recordError(scriptId, errorMessage, stackTrace) {
         return await this.db.insert('errors', {
             script_id: scriptId,
