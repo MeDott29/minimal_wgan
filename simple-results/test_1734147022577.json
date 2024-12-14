@@ -1,0 +1,7 @@
+{
+  "id": 1734147022577,
+  "script": "\n            async function test(a, b) {\n                return String(a).split(\"\").reverse().join(\"\");\n            }\n            test(40.814565758372325, 1.1316022483186305);\n        ",
+  "success": true,
+  "result": "523273857565418.04",
+  "timestamp": "2024-12-14T03:30:22.578Z"
+}

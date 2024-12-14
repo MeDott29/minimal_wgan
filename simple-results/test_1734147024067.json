@@ -1,0 +1,10 @@
+{
+  "id": 1734147024067,
+  "script": "\n            async function test(a, b) {\n                throw new Error(\"Random failure\");\n            }\n            test(62.06648615289727, 54.44211274547322);\n        ",
+  "success": false,
+  "error": {
+    "message": "Execution error: Random failure",
+    "stack": "Error: Execution error: Random failure\n    at SimpleTestRunner.runTest (/home/ath/Desktop/wgan/simple-solution.js:94:23)\n    at async main (/home/ath/Desktop/wgan/simple-solution.js:163:24)"
+  },
+  "timestamp": "2024-12-14T03:30:24.067Z"
+}

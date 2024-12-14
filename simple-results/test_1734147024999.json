@@ -1,0 +1,7 @@
+{
+  "id": 1734147024999,
+  "script": "\n            async function test(a, b) {\n                return typeof a === typeof b;\n            }\n            test(2.062128942902186, 2.6143657261715747);\n        ",
+  "success": true,
+  "result": true,
+  "timestamp": "2024-12-14T03:30:25.000Z"
+}

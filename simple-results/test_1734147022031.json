@@ -1,0 +1,7 @@
+{
+  "id": 1734147022031,
+  "script": "\n            async function test(a, b) {\n                return Math.sqrt(Math.abs(a * b));\n            }\n            test(5.884447520562075, 59.12422220073679);\n        ",
+  "success": true,
+  "result": 18.652436375291213,
+  "timestamp": "2024-12-14T03:30:22.031Z"
+}

@@ -1,0 +1,7 @@
+{
+  "id": 1734147023235,
+  "script": "\n            async function test(a, b) {\n                return Number(a.toString()) + b;\n            }\n            test(15.6921969428788, 81.45782758959822);\n        ",
+  "success": true,
+  "result": 97.15002453247702,
+  "timestamp": "2024-12-14T03:30:23.235Z"
+}

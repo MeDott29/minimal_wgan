@@ -1,0 +1,7 @@
+{
+  "id": 1734147022264,
+  "script": "\n            async function test(a, b) {\n                return Object.prototype.toString.call(a);\n            }\n            test(66.16829055534158, 30.637205093099418);\n        ",
+  "success": true,
+  "result": "[object Number]",
+  "timestamp": "2024-12-14T03:30:22.264Z"
+}

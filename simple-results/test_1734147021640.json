@@ -1,0 +1,10 @@
+{
+  "id": 1734147021640,
+  "script": "\n            async function test(a, b) {\n                return new Array(a).fill(b);\n            }\n            test(50.19966021507594, 10.811577013978946);\n        ",
+  "success": false,
+  "error": {
+    "message": "Execution error: Invalid array length",
+    "stack": "Error: Execution error: Invalid array length\n    at SimpleTestRunner.runTest (/home/ath/Desktop/wgan/simple-solution.js:94:23)\n    at async main (/home/ath/Desktop/wgan/simple-solution.js:163:24)"
+  },
+  "timestamp": "2024-12-14T03:30:21.640Z"
+}

@@ -1,0 +1,10 @@
+{
+  "id": 1734147024284,
+  "script": "\n            async function test(a, b) {\n                return Object.assign({}, {a}, {b});\n            }\n            test(42.545541454987614, 79.72802830822513);\n        ",
+  "success": true,
+  "result": {
+    "a": 42.545541454987614,
+    "b": 79.72802830822513
+  },
+  "timestamp": "2024-12-14T03:30:24.284Z"
+}

@@ -1,0 +1,10 @@
+{
+  "id": 1734147021593,
+  "script": "\n            async function test(a, b) {\n                return null.method();\n            }\n            test(10.62559402775256, 16.83011899883835);\n        ",
+  "success": false,
+  "error": {
+    "message": "Execution error: Cannot read properties of null (reading 'method')",
+    "stack": "Error: Execution error: Cannot read properties of null (reading 'method')\n    at SimpleTestRunner.runTest (/home/ath/Desktop/wgan/simple-solution.js:94:23)\n    at async main (/home/ath/Desktop/wgan/simple-solution.js:163:24)"
+  },
+  "timestamp": "2024-12-14T03:30:21.593Z"
+}

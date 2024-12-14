@@ -1,0 +1,7 @@
+{
+  "id": 1734147022133,
+  "script": "\n            async function test(a, b) {\n                return Math.round(a / b);\n            }\n            test(41.82041101927163, 90.02320943115076);\n        ",
+  "success": true,
+  "result": 0,
+  "timestamp": "2024-12-14T03:30:22.133Z"
+}

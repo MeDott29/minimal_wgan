@@ -1,0 +1,7 @@
+{
+  "id": 1734147022968,
+  "script": "\n            async function test(a, b) {\n                return parseInt(a) + parseFloat(b);\n            }\n            test(22.289827300964205, 38.839464118501276);\n        ",
+  "success": true,
+  "result": 60.839464118501276,
+  "timestamp": "2024-12-14T03:30:22.968Z"
+}

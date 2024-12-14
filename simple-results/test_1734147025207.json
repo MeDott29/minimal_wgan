@@ -1,0 +1,7 @@
+{
+  "id": 1734147025207,
+  "script": "\n            async function test(a, b) {\n                return Math.max(a, b, a * b);\n            }\n            test(96.87792281807602, 37.19220206718896);\n        ",
+  "success": true,
+  "result": 3603.103281299419,
+  "timestamp": "2024-12-14T03:30:25.208Z"
+}

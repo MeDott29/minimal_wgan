@@ -1,0 +1,10 @@
+{
+  "id": 1734147021793,
+  "script": "\n            async function test(a, b) {\n                return [a, b].map(x => x * 2);\n            }\n            test(80.32792186931235, 94.064276304094);\n        ",
+  "success": true,
+  "result": [
+    160.6558437386247,
+    188.128552608188
+  ],
+  "timestamp": "2024-12-14T03:30:21.793Z"
+}

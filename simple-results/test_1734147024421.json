@@ -1,0 +1,7 @@
+{
+  "id": 1734147024421,
+  "script": "\n            async function test(a, b) {\n                return new Error(\"Deliberate error\");\n            }\n            test(87.03766348950398, 86.48652533768117);\n        ",
+  "success": true,
+  "result": {},
+  "timestamp": "2024-12-14T03:30:24.421Z"
+}
