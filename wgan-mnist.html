@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WGAN MNIST Generator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tensorflow/4.15.0/tf.min.js"></script>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .header {
+            margin-bottom: 24px;
+        }
+        .header h1 {
+            margin: 0;
+            color: #1a1a1a;
+        }
+        .canvas-container {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        canvas {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background: white;
+        }
+        .controls {
+            display: flex;
+            gap: 12px;
+            margin: 20px 0;
+        }
+        button {
+            padding: 12px 24px;
+            background: #0066ff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        button:hover:not(:disabled) {
+            background: #0052cc;
+            transform: translateY(-1px);
+        }
+        button:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+        }
+        .status {
+            margin: 16px 0;
+            padding: 16px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            font-size: 14px;
+            color: #4a4a4a;
+        }
+        .progress-container {
+            display: none;
+            margin: 20px 0;
+            padding: 20px;
+            background: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .progress-container h3 {
+            margin: 0 0 16px 0;
+            color: #2a2a2a;
+            font-size: 16px;
+        }
+        .progress-bar {
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: #0066ff;
+            transition: width 0.3s ease;
+        }
+        .progress-status {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 8px;
+            font-size: 14px;
+            color: #666;
+        }
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+        .metric-card {
+            background: #f8f9fa;
+            padding: 16px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #0066ff;
+        }
+        .metric-label {
+            font-size: 14px;
+            color: #666;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>WGAN MNIST Generator</h1>
+        </div>
+
+        <div class="progress-container" id="progressContainer">
+            <h3>Loading MNIST Dataset</h3>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-status">
+                <span id="progressText">0%</span>
+                <span id="progressPhase">Initializing...</span>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button id="trainButton">Start Training</button>
+            <button id="generateButton" disabled>Generate Image</button>
+        </div>
+
+        <div class="status" id="status">Ready to start training...</div>
+
+        <div class="metrics">
+            <div class="metric-card">
+                <div class="metric-value" id="epochCounter">0/50</div>
+                <div class="metric-label">Current Epoch</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value" id="dLoss">0.000</div>
+                <div class="metric-label">Discriminator Loss</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value" id="gLoss">0.000</div>
+                <div class="metric-label">Generator Loss</div>
+            </div>
+        </div>
+
+        <div class="canvas-container">
+            <canvas id="generatedImage" width="280" height="280"></canvas>
+        </div>
+    </div>
+</body>
+</html>
