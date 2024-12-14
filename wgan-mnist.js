@@ -237,4 +237,125 @@ class TrainingController {
         try {
             const mnist = await tf.data.mnist({
                 onProgress: (progress) => {
-                    if
+                    if (progress < 0.5) {
+                        this.ui.updateProgress('Loading training set', progress * 2);
+                    } else {
+                        this.ui.updateProgress('Loading test set', (progress - 0.5) * 2);
+                    }
+                }
+            });
+
+            this.ui.updateProgress('Processing dataset', 1);
+            await new Promise(resolve => setTimeout(resolve, 500));
+            this.ui.elements.progressContainer.style.display = 'none';
+            
+            return mnist.train.images;
+        } catch (error) {
+            this.ui.updateStatus(`Error loading dataset: ${error.message}`);
+            throw error;
+        }
+    }
+
+    async train() {
+        if (!this.trainImages) {
+            this.trainImages = await this.loadMNIST();
+        }
+
+        this.ui.updateStatus('Training started...');
+        const batchesPerEpoch = Math.floor(this.trainImages.shape[0] / this.wgan.batchSize);
+
+        for (let epoch = 0; epoch < this.numEpochs && this.isTraining; epoch++) {
+            for (let batch = 0; batch < batchesPerEpoch && this.isTraining; batch++) {
+                const start = batch * this.wgan.batchSize;
+                const batchImages = this.trainImages.slice(
+                    [start, 0, 0, 0],
+                    [this.wgan.batchSize, 28, 28, 1]
+                );
+
+                // Train discriminator multiple times
+                let dLoss = 0;
+                for (let i = 0; i < 5; i++) {
+                    dLoss = await this.wgan.trainDiscriminator(batchImages);
+                }
+
+                // Train generator once
+                const gLoss = await this.wgan.trainGenerator();
+
+                // Update UI
+                this.ui.updateMetrics(
+                    epoch + 1,
+                    this.numEpochs,
+                    dLoss.dataSync()[0],
+                    gLoss.dataSync()[0]
+                );
+
+                if (batch % 10 === 0) {
+                    const generatedImage = this.wgan.generateImage();
+                    this.ui.displayImage(generatedImage.reshape([28, 28]));
+                    tf.dispose(generatedImage);
+                }
+
+                tf.dispose([batchImages, dLoss, gLoss]);
+                await tf.nextFrame(); // Allow UI to update
+            }
+        }
+
+        if (!this.isTraining) {
+            this.ui.updateStatus('Training stopped.');
+        } else {
+            this.ui.updateStatus('Training completed.');
+            this.isTraining = false;
+            this.ui.setTrainingState(false);
+        }
+    }
+
+    async toggleTraining() {
+        if (!this.isTraining) {
+            this.isTraining = true;
+            this.ui.setTrainingState(true);
+            try {
+                await this.train();
+            } catch (error) {
+                this.ui.updateStatus(`Error during training: ${error.message}`);
+                this.isTraining = false;
+                this.ui.setTrainingState(false);
+            }
+        } else {
+            this.isTraining = false;
+            this.ui.setTrainingState(false);
+        }
+    }
+
+    async generateImage() {
+        try {
+            const generatedImage = this.wgan.generateImage();
+            this.ui.displayImage(generatedImage.reshape([28, 28]));
+            tf.dispose(generatedImage);
+        } catch (error) {
+            this.ui.updateStatus(`Error generating image: ${error.message}`);
+        }
+    }
+}
+
+// Initialize the application
+document.addEventListener('DOMContentLoaded', () => {
+    // Enable memory growth for GPU if available
+    if (tf.getBackend() === 'webgl') {
+        tf.env().set('WEBGL_DELETE_TEXTURE_THRESHOLD', 0);
+    }
+
+    // Create instances
+    const ui = new UIController();
+    const wgan = new WGAN();
+    const trainer = new TrainingController(wgan, ui);
+
+    // Set up error handling
+    window.addEventListener('error', (event) => {
+        ui.updateStatus(`Error: ${event.message}`);
+    });
+
+    // Memory cleanup on page unload
+    window.addEventListener('beforeunload', () => {
+        tf.dispose();
+    });
+});
