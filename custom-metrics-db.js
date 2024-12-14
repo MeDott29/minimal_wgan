@@ -149,11 +149,12 @@ class AIMetricsSystem {
         await this.db.init();
     }
 
-    async recordScript(content) {
+    async recordScript(content, manual_intervention = false) {
         return await this.db.insert('scripts', {
             content,
             char_count: content.length,
-            run_count: 0
+            run_count: 0,
+            manual_intervention
         });
     }
 
@@ -175,6 +176,7 @@ class AIMetricsSystem {
         const totalRuns = scripts.reduce((sum, s) => sum + (s.run_count || 0), 0);
         const totalErrors = errors.length;
         const avgChars = scripts.reduce((sum, s) => sum + s.char_count, 0) / totalScripts;
+        const totalManualScripts = scripts.filter(s => s.manual_intervention).length;
 
         // Calculate errors per minute
         const now = new Date();
@@ -188,7 +190,8 @@ class AIMetricsSystem {
             total_runs: totalRuns,
             total_errors: totalErrors,
             avg_chars_per_script: avgChars,
-            errors_per_minute: recentErrors
+            errors_per_minute: recentErrors,
+            total_manual_scripts: totalManualScripts
         });
     }
 
@@ -232,9 +235,12 @@ class AIMetricsSystem {
             this.getErrorGenerationRate()
         ]);
 
+        const metrics = await this.db.query('metrics', {}, 1);
+
         return {
             progress,
             rate,
+            metrics: metrics[0],
             estimatedTimeToGoal: {
                 minutes: progress.remainingErrors / (rate.errorsPerMinute || 1)
             },
